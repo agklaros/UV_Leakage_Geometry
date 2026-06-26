@@ -1,0 +1,52 @@
+# UV Leakage Geometry — Project Parameters
+# All tunable parameters live here. Notebooks must read from this file; do not hardcode.
+
+crossmatch:
+  radius_arcsec: 2.0          # matching radius applied to all catalogs
+  min_catalog_matches: 3      # minimum distinct catalogs for a QSO to be retained
+
+catalogs:
+  - id: "II/389/ps1_dr2"      # PanSTARRS DR2
+  - id: "II/319/las9"         # UKIDSS LAS
+  - id: "II/319/dxs9"         # UKIDSS DXS
+  - id: "II/319/gcs9"         # UKIDSS GCS
+  - id: "II/311/wise"         # AllWISE
+  - id: "II/335/galex_ais"    # GALEX AIS
+  - id: "II/312/ais"          # GALEX AIS (alt)
+  - id: "II/312/mis"          # GALEX MIS
+
+band_wavelengths_AA:           # pivot wavelengths in Angstroms
+  FUV:  1549
+  NUV:  2303
+  g:    4810
+  r:    6170
+  i:    7520
+  z:    8660
+  y:    9620
+  Y:    10305
+  J:    12483
+  H:    16313
+  K:    22010
+  W1:   33680
+  W2:   46180
+  W3:   120820
+  W4:   221940
+
+vega_to_ab_offsets:            # add to Vega mag before flux conversion
+  W1:  2.699
+  W2:  3.339
+  W3:  5.174
+  W4:  6.620
+  Y:   0.634
+  J:   0.938
+  H:   1.379
+  K:   1.900
+
+flux_outlier_thresholds_flam:  # FLAM values above these are set to NaN
+  galex_panstarrs: 1.0e-11
+  ukidss:          1.0e-10
+
+uv_excess:
+  ebv_min: 0.1                 # minimum E(B-V) to consider a QSO genuinely reddened
+  target_sample_max: 100       # flag if clean UV-excess sample exceeds this
+
