@@ -1,138 +1,185 @@
 import csv
+import numpy as np
 from astropy import units as u
 from astropy.table import Table
 from astroquery.xmatch import XMatch
 
-# 1. Define paths (using the exact paths from your environment)
-csv_file = "/home/agklaros/Documents/UV_Leakage_Geometry/data/raw/QSO_Sample.csv"
-output_file = "/home/agklaros/Documents/UV_Leakage_Geometry/data/matched/QSO_SED_Matches.csv"
-radius = 2 * u.arcsec
+BASE_DIR     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry"
+COMBINED_CSV = f"{BASE_DIR}/data/raw/COMBINED_QSOS_TAB.csv"
+W2M_CSV      = f"{BASE_DIR}/data/raw/W2M_QSOs.csv"
+COMBINED_OUT = f"{BASE_DIR}/data/matched/COMBINED_matched.csv"
+W2M_OUT      = f"{BASE_DIR}/data/matched/W2M_matched.csv"
+RADIUS       = 2 * u.arcsec
 
-# 2. Define catalogs and their corresponding magnitude column mappings.
-# To ensure robustness, we map standard names to possible VizieR variations.
-mag_mapping = {
-    'gmag': ['gmag', 'g_mag', 'gmagPSF'],
-    'rmag': ['rmag', 'r_mag', 'rmagPSF'],
-    'imag': ['imag', 'i_mag', 'imagPSF'],
-    'zmag': ['zmag', 'z_mag', 'zmagPSF'],
-    'ymag': ['ymag', 'y_mag', 'ymagPSF'],
-    'Ymag': ['Ymag', 'Y_mag', 'YmagAper3'],
-    'Jmag': ['Jmag', 'J_mag', 'JmagAper3', 'Jmag1'],
-    'Hmag': ['Hmag', 'H_mag', 'HmagAper3'],
-    'Kmag': ['Kmag', 'K_mag', 'KmagAper3', 'Kmag1'],
-    'W1mag': ['W1mag', 'w1mpro', 'W1_mag'],
-    'W2mag': ['W2mag', 'w2mpro', 'W2_mag'],
-    'W3mag': ['W3mag', 'w3mpro', 'W3_mag'],
-    'W4mag': ['W4mag', 'w4mpro', 'W4_mag'],
-    'FUVmag': ['FUVmag', 'fuv_mag', 'fuv_mag_best'],
-    'NUVmag': ['NUVmag', 'nuv_mag', 'nuv_mag_best']
+# Column name candidate maps (first match wins, case-insensitive)
+PS1_COL_MAP = {
+    'gmag': ['gmag', 'gMeanPSFMag'],
+    'rmag': ['rmag', 'rMeanPSFMag'],
+    'imag': ['imag', 'iMeanPSFMag'],
+    'zmag': ['zmag', 'zMeanPSFMag'],
+    'ymag': ['ymag', 'yMeanPSFMag'],
+}
+# W2M already has gmag/rmag/imag/zmag; prefix PS1 columns to avoid collision
+PS1_W2M_COL_MAP = {
+    'PS1_gmag': ['gmag', 'gMeanPSFMag'],
+    'PS1_rmag': ['rmag', 'rMeanPSFMag'],
+    'PS1_imag': ['imag', 'iMeanPSFMag'],
+    'PS1_zmag': ['zmag', 'zMeanPSFMag'],
+    'PS1_ymag': ['ymag', 'yMeanPSFMag'],
+}
+GALEX_COL_MAP = {
+    'FUVmag': ['FUVmag', 'fuv_mag'],
+    'NUVmag': ['NUVmag', 'nuv_mag'],
+}
+UKIDSS_COL_MAP = {
+    'yAperMag3':   ['yAperMag3'],
+    'j_1AperMag3': ['j_1AperMag3', 'jAperMag3'],
+    'hAperMag3':   ['hAperMag3'],
+    'kAperMag3':   ['kAperMag3'],
+}
+TWOMASS_COL_MAP = {
+    'Jmag_2mass': ['Jmag', 'j_m'],
+    'Hmag_2mass': ['Hmag', 'h_m'],
+    'Kmag_2mass': ['Kmag', 'k_m'],
 }
 
-# List of catalogs that yielded matches in your Match_quantity.txt
-catalogs_to_query = [
-    "II/389/ps1_dr2",     # PanSTARRS
-    "II/319/las9",        # UKIDSS LAS
-    "II/319/dxs9",        # UKIDSS DXS
-    "II/319/gcs9",        # UKIDSS GCS
-    "II/311/wise",        # AllWISE
-    "II/335/galex_ais",   # GALEX AIS
-    "II/312/ais",         # GALEX AIS Alt
-    "II/312/mis"          # GALEX MIS
-]
+# Helpers
+_SENTINELS = {'', 'nan', 'none', '--', '99', '99.0', '-99', '-99.0', '-9999'}
 
-print("Reading base QSO sample...")
-input_table = Table.read(csv_file, format="csv")
 
-# 3. Initialize data structures using native Python dicts
-data_dict = {}
-catalog_matches = {}
-best_distances = {}
-
-for row in input_table:
-    tid = str(row['TARGETID'])
-    # Store standard metadata
-    data_dict[tid] = {
-        'TARGETID': tid,
-        'RA': row['RA'],
-        'DEC': row['DEC'],
-        'Z': row['Z'],
-        'SPECTYPE': row['SPECTYPE'],
-        'matched_catalogs_count': 0
-    }
-    # Initialize all magnitude fields with empty strings
-    for field in mag_mapping.keys():
-        data_dict[tid][field] = ''
-        
-    catalog_matches[tid] = set()
-    best_distances[tid] = {}
-
-# 4. Perform crossmatches sequentially
-print("\nStarting multi-catalog crossmatching...")
-for cat_id in catalogs_to_query:
-    print(f"Querying {cat_id}...")
+def _safe_float(val):
+    """Return float or nan for masked/sentinel catalog values."""
+    if isinstance(val, np.ma.core.MaskedConstant):
+        return float('nan')
+    if hasattr(val, 'mask') and bool(val.mask):
+        return float('nan')
     try:
-        matched_table = XMatch.query(
-            cat1=input_table,
-            cat2=cat_id,
-            max_distance=radius,
-            colRA1="RA",
-            colDec1="DEC"
+        fval = float(val)
+    except (TypeError, ValueError):
+        return float('nan')
+    if str(val).strip().lower() in _SENTINELS:
+        return float('nan')
+    return fval
+
+
+def _extract_col(row, candidates, colnames):
+    """Return the first finite float matching any candidate column name."""
+    lower_map = {c.lower(): c for c in colnames}
+    for cand in candidates:
+        actual = lower_map.get(cand.lower())
+        if actual is None:
+            continue
+        fval = _safe_float(row[actual])
+        if np.isfinite(fval):
+            return fval
+    return float('nan')
+
+
+def run_xmatch(base_table, catalog_id, id_col, ra_col, dec_col, col_map):
+    """
+    XMatch base_table against a VizieR catalog.
+    Returns {source_id: {out_col: value}} keeping only the closest match per source.
+    """
+    print(f"  Querying {catalog_id} ...", end=' ', flush=True)
+    try:
+        mt = XMatch.query(
+            cat1=base_table,
+            cat2=catalog_id,
+            max_distance=RADIUS,
+            colRA1=ra_col,
+            colDec1=dec_col,
         )
-        
-        print(f" -> Found {len(matched_table)} matches.")
-        
-        # Process rows from the matched table
-        for row in matched_table:
-            tid = str(row['TARGETID'])
-            dist = row['angDist'] if 'angDist' in matched_table.colnames else 0.0
-            
-            if tid in data_dict:
-                # If this is the first match for this catalog or a closer match, record it
-                if cat_id not in best_distances[tid] or dist < best_distances[tid][cat_id]:
-                    best_distances[tid][cat_id] = dist
-                    catalog_matches[tid].add(cat_id)
-                    
-                    # Extract the relevant magnitude columns case-insensitively
-                    for std_name, possible_names in mag_mapping.items():
-                        for colname in matched_table.colnames:
-                            if colname.lower() in [p.lower() for p in possible_names]:
-                                val = row[colname]
-                                # Check for masked values or empty placeholders
-                                if hasattr(val, 'mask') and val.mask:
-                                    continue
-                                if str(val) not in ['', 'nan', 'None', '--']:
-                                    data_dict[tid][std_name] = val
-                                    break
-                                    
-    except Exception as e:
-        print(f" -> Skipped {cat_id} due to error: {e}")
+        print(f"{len(mt)} raw matches")
+    except Exception as exc:
+        print(f"FAILED ({exc})")
+        return {}
 
-# 5. Filter for targets that matched $\ge 3$ distinct catalogs
-filtered_targets = []
-for tid, info in data_dict.items():
-    num_matches = len(catalog_matches[tid])
-    info['matched_catalogs_count'] = num_matches
-    if num_matches >= 3:
-        filtered_targets.append(info)
+    dist_col = 'angDist' if 'angDist' in mt.colnames else None
+    result = {}
+    for row in mt:
+        tid = str(row[id_col])
+        dist = float(row[dist_col]) if dist_col else 0.0
+        if tid in result and dist >= result[tid]['_dist']:
+            continue
+        extracted = {'_dist': dist}
+        for out_name, candidates in col_map.items():
+            extracted[out_name] = _extract_col(row, candidates, mt.colnames)
+        result[tid] = extracted
+    return result
 
-print(f"\nProcessing complete. Found {len(filtered_targets)} QSOs matching >= 3 catalogs.")
 
-# 6. Save results to CSV using built-in csv module
-fieldnames = [
-    'TARGETID', 'RA', 'DEC', 'Z', 'SPECTYPE', 'matched_catalogs_count',
-    'FUVmag', 'NUVmag', 
+def write_matched_csv(base_table, id_col, base_cols, xmatch_list, out_fields, out_path):
+    """
+    Merge base catalog with xmatch results and write CSV.
+    Photometry columns absent from all catalogs are written as 'nan'.
+    """
+    phot_fields = [f for f in out_fields if f not in base_cols]
+    print(f"  Writing {out_path} ...")
+    with open(out_path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=out_fields)
+        writer.writeheader()
+        for row in base_table:
+            tid = str(row[id_col])
+            rec = {col: row[col] for col in base_cols}
+            for field in phot_fields:
+                rec[field] = float('nan')
+            for xm in xmatch_list:
+                if tid in xm:
+                    for field, val in xm[tid].items():
+                        if not field.startswith('_') and field in out_fields:
+                            rec[field] = val
+            row_out = {
+                k: ('nan' if isinstance(v, float) and np.isnan(v) else v)
+                for k, v in rec.items()
+            }
+            writer.writerow(row_out)
+    print(f"    -> {len(base_table)} rows written to {out_path}")
+
+
+print("\n=== COMBINED_QSOS_TAB ===")
+combined_base = Table.read(COMBINED_CSV, format='csv')
+print(f"  Loaded {len(combined_base)} sources")
+
+ps1_c    = run_xmatch(combined_base, "II/349/ps1",       "TARGETID", "RA", "DEC", PS1_COL_MAP)
+galex_c  = run_xmatch(combined_base, "II/335/galex_ais", "TARGETID", "RA", "DEC", GALEX_COL_MAP)
+ukidss_c = run_xmatch(combined_base, "II/319/las9",      "TARGETID", "RA", "DEC", UKIDSS_COL_MAP)
+mass2_c  = run_xmatch(combined_base, "II/246/out",       "TARGETID", "RA", "DEC", TWOMASS_COL_MAP)
+
+COMBINED_BASE_COLS = ['TARGETID', 'RA', 'DEC', 'Z', 'SPECTYPE', 'EBV', 'EBV_ERR']
+COMBINED_FIELDS = COMBINED_BASE_COLS + [
+    'FUVmag', 'NUVmag',
     'gmag', 'rmag', 'imag', 'zmag', 'ymag',
-    'Ymag', 'Jmag', 'Hmag', 'Kmag',
-    'W1mag', 'W2mag', 'W3mag', 'W4mag'
+    'yAperMag3', 'j_1AperMag3', 'hAperMag3', 'kAperMag3',
+    'Jmag_2mass', 'Hmag_2mass', 'Kmag_2mass',
 ]
+write_matched_csv(
+    combined_base, 'TARGETID', COMBINED_BASE_COLS,
+    [galex_c, ps1_c, ukidss_c, mass2_c],
+    COMBINED_FIELDS, COMBINED_OUT,
+)
 
-print(f"Writing results to {output_file}...")
-with open(output_file, mode='w', newline='') as f:
-    writer = csv.DictWriter(f, fieldnames=fieldnames)
-    writer.writeheader()
-    for target in filtered_targets:
-        # Keep only the columns specified in fieldnames
-        row_data = {k: target.get(k, '') for k in fieldnames}
-        writer.writerow(row_data)
+print("\n=== W2M_QSOs ===")
+w2m_base = Table.read(W2M_CSV, format='csv')
+print(f"  Loaded {len(w2m_base)} sources")
 
-print("Done!")
+ps1_w   = run_xmatch(w2m_base, "II/349/ps1",       "designation", "ra", "dec", PS1_W2M_COL_MAP)
+galex_w = run_xmatch(w2m_base, "II/335/galex_ais", "designation", "ra", "dec", GALEX_COL_MAP)
+
+W2M_BASE_COLS = [
+    'designation', 'ra', 'dec', 'zsp',
+    'umag', 'gmag', 'rmag', 'imag', 'zmag',
+    'j_m_2mass', 'h_m_2mass', 'k_m_2mass',
+    'w1mpro', 'w2mpro', 'w3mpro', 'w4mpro',
+    'broad', 'src',
+]
+W2M_FIELDS = W2M_BASE_COLS + [
+    'FUVmag', 'NUVmag',
+    'PS1_gmag', 'PS1_rmag', 'PS1_imag', 'PS1_zmag', 'PS1_ymag',
+]
+write_matched_csv(
+    w2m_base, 'designation', W2M_BASE_COLS,
+    [galex_w, ps1_w],
+    W2M_FIELDS, W2M_OUT,
+)
+
+print("\nDone.")

@@ -17,6 +17,9 @@ from astropy.convolution import convolve, Box1DKernel
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 
+#for cursors
+import mplcursors
+
 import synphot
 from synphot import SourceSpectrum
 from synphot import units as su
@@ -28,7 +31,7 @@ from scipy.optimize import curve_fit
 
 #from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
-file = '/home/agklaros/Documents/UV_Leakage_Geometry/data/matched/UKPSAWG_matched.csv'
+file = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/COMBINED_matched.csv'
 table = Table.read(file)
 
 
@@ -90,8 +93,10 @@ rmags = np.array(table['rmag'])
 imags = np.array(table['imag'])
 zmags = np.array(table['zmag'])
 
-nuvg = NUVmags / gmags
-gr = gmags / rmags
+fuvnuv = FUVmags - NUVmags
+nuvg = NUVmags - gmags
+gr = gmags - rmags
+
 
 
 #Only display E(B-V) > 0.2:
@@ -100,13 +105,21 @@ ebv[ebv < 0.2] = np.nan
 
 
 plt.figure(figsize=(10, 10))
-plt.scatter(gr, nuvg, c=ebv, cmap='inferno',s=100)
+sc = plt.scatter(nuvg, fuvnuv, c=ebv, cmap='inferno', s=100)
+
+
+#Cursor to show each DESI TARGETID
+cursor = mplcursors.cursor(sc, hover=True)
+@cursor.connect("add")
+def on_add(sel):
+    idx = sel.index
+    sel.annotation.set_text(f"TARGETID: {targetID[idx]}")
 
 plt.colorbar(label='E(B-V)')
-plt.axhline(y=1)
-plt.axvline(x=1)
-plt.xlabel('G/R <0')
-plt.ylabel('NUV/G >0')
+plt.axhline(y=0)
+plt.axvline(x=0)
+plt.xlabel('nuvg <0')
+plt.ylabel('fuvnuv >0')
 plt.show()
     
 
