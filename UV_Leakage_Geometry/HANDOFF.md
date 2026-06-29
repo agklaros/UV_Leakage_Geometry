@@ -65,3 +65,44 @@
 1. Run `COMBINED_SEDs_unred_candidates.py` to inspect SEDs of the 18 UV-excess candidates
 2. Update CLAUDE.md to reflect `data/filters/` as the filter location
 3. Run /validate-crossmatch to decide on primary matched CSV
+
+---
+
+## Session — 2026-06-29
+
+**What we did:**
+- Rewrote `scripts/crossmatch_multi.py` from scratch:
+  - Replaced loop-based dict merging with sequential `astropy.table.join` / `unique` operations (no explicit Python loops)
+  - Step 1: XMatch all 34,293 QSOs → PanSTARRS DR1 (inner join)
+  - Step 2: XMatch PS1-matched sources → GALEX AIS (inner join — output contains only PS1+GALEX doubles)
+  - Steps 3a–c: XMatch PS1+GALEX preliminary catalog → UKIDSS, 2MASS, AllWISE independently (left join)
+  - Added AllWISE (`II/328/allwise`) — was missing from original script
+  - Removed W2M section (separate input catalog, not part of COMBINED pipeline)
+- Removed `COMBINED_matched.csv` from git tracking; added to `.gitignore` (it is a generated output)
+- Removed axis labels from SED plots in `COMBINED_SEDs_unred.py` and `COMBINED_SEDs_unred_candidates.py`
+
+**Column name changes in new crossmatch output — downstream scripts need updating:**
+- 2MASS: was `Jmag_2mass`, `Hmag_2mass`, `Kmag_2mass` → now `Jmag`, `Hmag`, `Kmag` (raw VizieR names)
+- AllWISE: was `w1mpro`–`w4mpro` → now `W1mag`–`W4mag` (raw VizieR names)
+
+**Progress state:**
+
+| Stage | Status |
+|---|---|
+| Crossmatch script | Rewritten (sequential astropy joins; must be re-run to regenerate COMBINED_matched.csv) |
+| SED construction | In progress (notebook 02 migrated) |
+| Unreddened template | In progress (notebook 03 migrated) |
+| Color-color plots | In progress (notebook 04 stub) |
+| UV excess candidates | 18 candidates in uv_excess_candidates.csv (based on old crossmatch; must recheck after re-run) |
+
+**Open issues:**
+- `COMBINED_matched.csv` does not exist — must run `crossmatch_multi.py` to regenerate
+- `candidates_to_csv.py` and SED scripts reference old 2MASS/AllWISE column names (`Jmag_2mass`, `w1mpro`, etc.) — update before running
+- CLAUDE.md directory layout still lists `filters/` — should be updated to `data/filters/`
+- Crossmatch radius not yet optimized (2 arcsec for all catalogs)
+
+**Next steps:**
+1. Update column names in `candidates_to_csv.py` and `COMBINED_SEDs_unred*.py` to match new output (`Jmag`, `Hmag`, `Kmag`, `W1mag`–`W4mag`)
+2. Run `crossmatch_multi.py` to regenerate `COMBINED_matched.csv`
+3. Re-run `candidates_to_csv.py` to refresh UV-excess candidate list
+4. Inspect candidate SEDs with `COMBINED_SEDs_unred_candidates.py`
