@@ -47,6 +47,6 @@ flux_outlier_thresholds_flam:  # FLAM values above these are set to NaN
   ukidss:          1.0e-10
 
 uv_excess:
-  ebv_min: 0.1                 # minimum E(B-V) to consider a QSO genuinely reddened
+  ebv_min: 0.2                 # minimum E(B-V) to consider a QSO genuinely reddened
   target_sample_max: 100       # flag if clean UV-excess sample exceeds this
 
