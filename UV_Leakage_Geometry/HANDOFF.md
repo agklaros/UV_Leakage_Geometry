@@ -53,15 +53,15 @@
 | UV excess candidate SEDs | Script ready (`COMBINED_SEDs_unred_candidates.py`); not yet run |
 
 **Open issues:**
-- `candidates_to_csv.py` has not been run yet — `uv_excess_candidates.csv` may not exist until first run
 - Crossmatch radius not yet optimized (currently 2 arcsec for all catalogs)
 - Need to determine which of the four matched CSVs is the primary working sample
-- GitHub repository not yet initialized
 - CLAUDE.md directory layout still lists `filters/` — should be updated to `data/filters/`
 
+**What we resolved:**
+- `uv_excess_candidates.csv` was already populated and committed (18 candidates as of this session)
+- GitHub remote was already initialized; committed and pushed at d478b06
+
 **Next steps:**
-1. Run `candidates_to_csv.py` to generate `data/matched/uv_excess_candidates.csv`; check candidate count (target <100)
-2. Run `COMBINED_SEDs_unred_candidates.py` to inspect SEDs of UV-excess candidates
-3. Update CLAUDE.md to reflect `data/filters/` as the filter location
-4. Initialize git and push to GitHub
-5. Run /validate-crossmatch to decide on primary matched CSV
+1. Run `COMBINED_SEDs_unred_candidates.py` to inspect SEDs of the 18 UV-excess candidates
+2. Update CLAUDE.md to reflect `data/filters/` as the filter location
+3. Run /validate-crossmatch to decide on primary matched CSV
