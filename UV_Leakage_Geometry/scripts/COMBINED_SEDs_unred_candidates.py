@@ -16,10 +16,10 @@ from synphot.models import Empirical1D
 from synphot.observation import Observation
 
 BASE_DIR        = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry"
-file            = f"{BASE_DIR}/data/matched/COMBINED_matched.csv"
-candidates_file = f"{BASE_DIR}/data/matched/uv_excess_candidates.csv"
-filtdir         = f"{BASE_DIR}/data/filters/"
-templateQSO     = f"{BASE_DIR}/templates/qso_template.txt"
+file            = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/COMBINED_matched.csv"
+candidates_file = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates.csv"
+filtdir         = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/filters/"
+templateQSO     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/templates/qso_template.txt"
 
 table = Table.read(file)
 

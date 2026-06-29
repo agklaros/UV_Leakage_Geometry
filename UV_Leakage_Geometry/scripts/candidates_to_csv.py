@@ -2,16 +2,18 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import numpy as np
-import pandas as pd
-from astropy.table import Table
+from astropy.table import Table, vstack
 import astropy.units as u
 from synphot import units as su
 
-BASE_DIR = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry"
-file     = f"{BASE_DIR}/data/matched/COMBINED_matched.csv"
-out_file = f"{BASE_DIR}/data/matched/uv_excess_candidates.csv"
+FAWCETT_CSV = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/Fawcett_COMBINED_matched.csv"
+W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_COMBINED_matched.csv"
+out_file    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates.csv"
 
-table = Table.read(file)
+lam_fuv = 1549 * u.AA
+lam_nuv = 2303 * u.AA
+lam_g   = 4810 * u.AA
+lam_r   = 6170 * u.AA
 
 
 def mag_arr(col):
@@ -22,37 +24,44 @@ def mag_arr(col):
     return arr.astype(float)
 
 
-targetID = np.array(table['TARGETID'])
-ebv      = mag_arr(table['EBV'])
+def uv_excess_mask(tbl, gmag_col, rmag_col, require_ebv=True):
+    flam_fuv = (mag_arr(tbl['FUVmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_fuv))
+    flam_fuv[flam_fuv > (1e-11 * su.FLAM)] = np.nan
+    flam_nuv = (mag_arr(tbl['NUVmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_nuv))
+    flam_nuv[flam_nuv > (1e-11 * su.FLAM)] = np.nan
+    flam_g = (mag_arr(tbl[gmag_col]) * u.ABmag).to(su.FLAM, u.spectral_density(lam_g))
+    flam_g[flam_g > (1e-11 * su.FLAM)] = np.nan
+    flam_r = (mag_arr(tbl[rmag_col]) * u.ABmag).to(su.FLAM, u.spectral_density(lam_r))
+    flam_r[flam_r > (1e-11 * su.FLAM)] = np.nan
 
-lam_fuv = 1549 * u.AA
-lam_nuv = 2303 * u.AA
-lam_g   = 4810 * u.AA
-lam_r   = 6170 * u.AA
+    f_fn = flam_fuv / flam_nuv
+    f_ng = flam_nuv / flam_g
+    f_gr = flam_g   / flam_r
 
-flam_fuv = (mag_arr(table['FUVmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_fuv))
-flam_fuv[flam_fuv > (1e-11 * su.FLAM)] = np.nan
-flam_nuv = (mag_arr(table['NUVmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_nuv))
-flam_nuv[flam_nuv > (1e-11 * su.FLAM)] = np.nan
-flam_g = (mag_arr(table['gmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_g))
-flam_g[flam_g > (1e-11 * su.FLAM)] = np.nan
-flam_r = (mag_arr(table['rmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_r))
-flam_r[flam_r > (1e-11 * su.FLAM)] = np.nan
-
-f_fn = flam_fuv / flam_nuv
-f_ng = flam_nuv / flam_g
-f_gr = flam_g   / flam_r
-
-
-def UVExcess(index):
-    return (
-        (
-            (f_ng[index] > 1 and f_gr[index] < 1) or
-            (f_fn[index] > 1 and f_ng[index] < 1)
-        ) and ebv[index] > 0.2
+    flux_criterion = (
+        ((f_ng > 1) & (f_gr < 1)) |
+        ((f_fn > 1) & (f_ng < 1))
     )
 
+    if require_ebv:
+        ebv = mag_arr(tbl['EBV'])
+        return flux_criterion & (ebv > 0.2)
+    return flux_criterion
 
-candidates = [targetID[i] for i in range(len(targetID)) if UVExcess(i)]
-pd.DataFrame({'TARGETID': candidates}).to_csv(out_file, index=False)
-print(f"Wrote {len(candidates)} UV-excess candidates to {out_file}")
+
+
+fawcett = Table.read(FAWCETT_CSV, format='csv')
+fawcett_mask = uv_excess_mask(fawcett, gmag_col='gmag', rmag_col='rmag', require_ebv=True)
+fawcett_cands = fawcett[fawcett_mask]
+
+
+
+w2m = Table.read(W2M_CSV, format='csv')
+w2m_mask = uv_excess_mask(w2m, gmag_col='gmag_2', rmag_col='rmag_2', require_ebv=False)
+w2m_cands = w2m[w2m_mask]
+
+
+
+candidates = vstack([fawcett_cands, w2m_cands], join_type='outer')
+candidates.write(out_file, format='csv', overwrite=True)
+

@@ -1,0 +1,23 @@
+import numpy as np
+from astropy.table import Table, vstack, unique
+
+FAWCETT_CSV = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/Fawcett_COMBINED_matched.csv"
+W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_COMBINED_matched.csv"
+FINAL_OUT   = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/FINAL_COMBINED_QSOs.csv"
+
+Column_Keys = ['FUVmag', 'NUVmag', 'ymag', 'yAperMag3', 'j_1AperMag3', 'hAperMag3', 'kAperMag3']
+
+fawcett = Table.read(FAWCETT_CSV, format='csv')
+w2m     = Table.read(W2M_CSV,     format='csv')
+
+combined = vstack([fawcett, w2m], join_type='outer')
+n_before = len(combined)
+
+copy = combined.filled(0.0)
+copy['_copy'] = np.arange(len(copy))
+copy = unique(copy, keys=Column_Keys)
+combined = combined[copy['_copy']]
+
+n_dupes = n_before - len(combined)
+combined.write(FINAL_OUT, format='csv', overwrite=True)
+print(FINAL_OUT)
