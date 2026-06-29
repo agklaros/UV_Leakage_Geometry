@@ -160,8 +160,6 @@ for index, name in enumerate(targetID):
     plt.xscale('log')
     plt.yscale('log')
     plt.ylim(1e-18, 1e-15)
-    plt.xlabel('Rest Wavelength (Å)')
-    plt.ylabel(r'$F_\lambda$ (erg s$^{-1}$ cm$^{-2}$ Å$^{-1}$)')
     plt.title(f'TARGETID {name}   E(B-V) = {ebv[index]:.3f}')
     plt.legend(fontsize=8)
     plt.tight_layout()

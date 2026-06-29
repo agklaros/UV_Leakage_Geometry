@@ -20,3 +20,6 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated outputs
+UV_Leakage_Geometry/data/matched/COMBINED_matched.csv
