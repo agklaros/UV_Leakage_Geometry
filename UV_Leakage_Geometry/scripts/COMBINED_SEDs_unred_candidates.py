@@ -34,11 +34,7 @@ def mag_arr(col):
     return arr.astype(float)
 
 
-targetID = np.array(table['TARGETID'])
-redshift = mag_arr(table['Z'])
-ebv      = mag_arr(table['EBV'])
-RA       = mag_arr(table['RA'])
-DEC      = mag_arr(table['DEC'])
+ebv = mag_arr(table['EBV'])
 
 lam_fuv  = 1549  * u.AA
 lam_nuv  = 2303  * u.AA
@@ -126,8 +122,7 @@ flam_W4 = ((mag_arr(table['W4mag']) + 6.620) * u.ABmag).to(su.FLAM, u.spectral_d
 flam_W4[flam_W4 > (1e-10 * su.FLAM)] = np.nan
 
 
-for index, name in enumerate(targetID):
-    zsp = redshift[index]
+def plot_sed(index, name, ra, dec, zsp):
     plt.figure()
 
     lam_all = np.array([
@@ -160,6 +155,7 @@ for index, name in enumerate(targetID):
             synth_flx.append(np.nan)
     synth_flx = np.array(synth_flx)
 
+    # obs_for_scale order need not match lam_all; only finite pairs are used for median scaling
     obs_for_scale = np.array([
         flam_fuv.value[index], flam_nuv.value[index],
         flam_g.value[index],   flam_r.value[index],  flam_i.value[index],
@@ -180,10 +176,38 @@ for index, name in enumerate(targetID):
     plt.scatter(lam_tpl_rest[valid_tpl], scale * synth_flx[valid_tpl],
                 color='orange', marker='s', zorder=5, label='template synth phot')
 
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.ylim(1e-17, 2e-17)
-    plt.xlim(4000,9000)
-    plt.title(f'RA  = {RA[index]}   DEC = {DEC[index]:.3f}')
+    x_lo = 1e3
+    x_hi = 1e4
+    plt.xscale('linear')
+    plt.yscale('linear')
+    plt.xlim(x_lo, x_hi)
+    plt.ylim(0,3e-17)
+    plt.title(f'RA = {ra:.4f}   DEC = {dec:.4f}')
+    plt.legend(fontsize=8)
     plt.tight_layout()
     plt.show()
+
+
+# Loop 1: Fawcett candidates — rows where Z > 0
+# Z == 0.0 indicates a W2M row (no Fawcett redshift); skip
+targetID = np.array(table['TARGETID'], dtype=str)
+redshift = mag_arr(table['Z'])
+RA       = mag_arr(table['RA'])
+DEC      = mag_arr(table['DEC'])
+
+for index in range(len(table)):
+    if redshift[index] == 0.0:
+        continue
+    plot_sed(index, targetID[index], RA[index], DEC[index], redshift[index])
+
+# Loop 2: W2M candidates — rows where zsp > 0
+# zsp == 0.0 indicates a Fawcett row (no W2M spectroscopic redshift); skip
+designation = np.array(table['designation'], dtype=str)
+ra_w2m  = mag_arr(table['ra'])
+dec_w2m = mag_arr(table['dec'])
+zsp_w2m = mag_arr(table['zsp'])
+
+for index in range(len(table)):
+    if zsp_w2m[index] == 0.0:
+        continue
+    plot_sed(index, designation[index], ra_w2m[index], dec_w2m[index], zsp_w2m[index])

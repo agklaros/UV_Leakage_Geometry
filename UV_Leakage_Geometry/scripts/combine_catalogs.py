@@ -13,6 +13,8 @@ w2m     = Table.read(W2M_CSV,     format='csv')
 combined = vstack([fawcett, w2m], join_type='outer')
 n_before = len(combined)
 
+# unique() requires no masked values; fill with 0.0 temporarily,
+# then recover original (unmasked) rows by index to avoid propagating fills
 copy = combined.filled(0.0)
 copy['_copy'] = np.arange(len(copy))
 copy = unique(copy, keys=Column_Keys)

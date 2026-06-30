@@ -38,6 +38,8 @@ def uv_excess_mask(tbl, gmag_col, rmag_col, require_ebv=True):
     f_ng = flam_nuv / flam_g
     f_gr = flam_g   / flam_r
 
+    # NUV/g > 1 & g/r < 1: NUV excess over optical continuum (NUV upturn)
+    # FUV/NUV > 1 & NUV/g < 1: FUV upturn with suppressed NUV (patchy geometry signature)
     flux_criterion = (
         ((f_ng > 1) & (f_gr < 1)) |
         ((f_fn > 1) & (f_ng < 1))
@@ -57,7 +59,7 @@ fawcett_cands = fawcett[fawcett_mask]
 
 
 w2m = Table.read(W2M_CSV, format='csv')
-w2m_mask = uv_excess_mask(w2m, gmag_col='gmag_2', rmag_col='rmag_2', require_ebv=False)
+w2m_mask = uv_excess_mask(w2m, gmag_col='gmag_2', rmag_col='rmag_2', require_ebv=False)  # W2M catalog lacks Fawcett EBV estimates
 w2m_cands = w2m[w2m_mask]
 
 

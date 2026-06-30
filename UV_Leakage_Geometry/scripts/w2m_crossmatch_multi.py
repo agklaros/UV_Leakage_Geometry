@@ -2,6 +2,7 @@ from astropy import units as u
 from astropy.table import Table, join, unique
 from astroquery.xmatch import XMatch
 
+# W2M base catalog already includes SDSS ugriz and AllWISE/2MASS photometry from the W2M crossmatch
 BASE_DIR = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry"
 W2M_CSV  = f"{BASE_DIR}/data/raw/W2M_QSOs.csv"
 W2M_OUT  = f"{BASE_DIR}/data/matched/W2M_COMBINED_matched.csv"

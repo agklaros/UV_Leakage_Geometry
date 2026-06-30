@@ -147,3 +147,44 @@
 3. Update `COMBINED_SEDs_unred.py` column names to match new crossmatch output
 4. Fix y-axis / x-axis limits in candidate SED plots — current hardcoded `ylim(1e-17, 2e-17)` and `xlim(4000, 9000)` likely need adjustment per-source
 5. Update CLAUDE.md filter directory entry from `filters/` to `data/filters/`
+
+---
+
+## Session — 2026-06-30
+
+**What we did:**
+- Refactored `scripts/COMBINED_SEDs_unred_candidates.py`:
+  - Extracted the per-source plotting block into a reusable `plot_sed(index, name, ra, dec, zsp)` function
+  - Extended to loop over two candidate catalogs in sequence:
+    - **Loop 1 (Fawcett)**: uses `TARGETID`, `Z`, `RA`, `DEC` columns; skips rows where `Z == 0.0`
+    - **Loop 2 (W2M)**: uses `designation`, `zsp`, `ra`, `dec` columns (W2M naming convention); skips rows where `zsp == 0.0`
+  - Updated plot cosmetics: linear x/y axes, x-range `(1000, 10000)` Å, y-range `(0, 3e-17)`, RA/DEC title to 4 d.p., legend added
+  - `ebv` remains the only array extracted at module level; Fawcett arrays extracted just before Loop 1
+
+**What this resolves:**
+- Item 4 from previous next-steps: axis limits no longer hardcoded to a narrow window
+
+**Still outstanding:**
+- `COMBINED_matched.csv` does not exist — run `crossmatch_multi.py` to regenerate
+- `candidates_to_csv.py` still references old column names (`Jmag_2mass`, `w1mpro`, etc.)
+- `COMBINED_SEDs_unred.py` still references old column names
+- CLAUDE.md filter directory still listed as `filters/` (actual: `data/filters/`)
+- Crossmatch radius not yet optimized (2 arcsec for all catalogs)
+- W2M loop assumes the input table contains both Fawcett and W2M columns merged — verify input CSV structure before running
+
+**Progress state:**
+
+| Stage | Status |
+|---|---|
+| Crossmatch script | Rewritten; `COMBINED_matched.csv` must be regenerated |
+| SED construction | In progress (notebook 02 migrated) |
+| Unreddened template | In progress (notebook 03 migrated) |
+| Color-color plots | In progress (notebook 04 stub) |
+| Candidate SED script | Supports Fawcett + W2M loops; linear axes; not yet re-run |
+| Candidate SED figures | Two figures from previous session in `figures/` |
+
+**Next steps:**
+1. Run `crossmatch_multi.py` to regenerate `COMBINED_matched.csv`
+2. Update column names in `candidates_to_csv.py` and `COMBINED_SEDs_unred.py`
+3. Verify the input CSV for `COMBINED_SEDs_unred_candidates.py` has both Fawcett and W2M columns, then run it
+4. Update CLAUDE.md filter directory entry from `filters/` to `data/filters/`

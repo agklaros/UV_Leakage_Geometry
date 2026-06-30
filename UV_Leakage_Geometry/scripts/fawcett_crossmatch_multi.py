@@ -55,7 +55,7 @@ mt_allwise.sort('angDist')
 allwise = unique(mt_allwise, keys='TARGETID', keep='first')
 allwise = allwise[['TARGETID', 'W1mag', 'W2mag', 'W3mag', 'W4mag']]
 
-#Sequentially merge double matches with newer matches, keeping all double matches
+# UKIDSS/2MASS/AllWISE are optional; left join preserves all PS1+GALEX sources
 final = join(step2, ukidss,  keys='TARGETID', join_type='left')
 final = join(final, mass2,   keys='TARGETID', join_type='left')
 final = join(final, allwise, keys='TARGETID', join_type='left')

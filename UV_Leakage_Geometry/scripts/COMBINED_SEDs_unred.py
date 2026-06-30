@@ -115,6 +115,8 @@ f_gr = flam_g   / flam_r
 
 
 def UVExcess(index):
+    # NUV/g > 1 & g/r < 1: NUV excess over optical continuum (NUV upturn)
+    # FUV/NUV > 1 & NUV/g < 1: FUV upturn with suppressed NUV (patchy geometry signature)
     return (
         (
             (f_ng[index] > 1 and f_gr[index] < 1) or
