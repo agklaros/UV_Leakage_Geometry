@@ -188,3 +188,84 @@
 2. Update column names in `candidates_to_csv.py` and `COMBINED_SEDs_unred.py`
 3. Verify the input CSV for `COMBINED_SEDs_unred_candidates.py` has both Fawcett and W2M columns, then run it
 4. Update CLAUDE.md filter directory entry from `filters/` to `data/filters/`
+
+---
+
+## Session — 2026-06-30 (second session)
+
+**What we did:**
+- Reviewed all scripts changed since 2026-06-26 and added clarifying comments to six files (commit 6806c9e):
+  - `fawcett_crossmatch_multi.py`: noted that UKIDSS/2MASS/AllWISE use left join to preserve all PS1+GALEX sources
+  - `w2m_crossmatch_multi.py`: noted that W2M base catalog already includes SDSS/2MASS/AllWISE photometry
+  - `combine_catalogs.py`: explained the fill-then-recover dedup pattern (fill masked values with 0.0 to enable `unique()`, then recover original rows by integer index)
+  - `candidates_to_csv.py`: documented the two UV-excess flux-ratio branches (`NUV/g > 1 & g/r < 1` = NUV upturn; `FUV/NUV > 1 & NUV/g < 1` = patchy geometry); noted `require_ebv=False` for W2M due to absent Fawcett EBV
+  - `COMBINED_SEDs_unred.py`: same UV-excess branch documentation in `UVExcess()`
+  - `COMBINED_SEDs_unred_candidates.py`: noted `obs_for_scale` ordering is independent of `lam_all`; documented the `Z == 0.0` / `zsp == 0.0` skip logic for cross-catalog row identification
+- Pushed all changes to GitHub (origin/main up to date at 6806c9e)
+
+**What this resolves:**
+- Science logic in UV-excess selection criterion is now self-documenting for external readers
+- Non-obvious implementation patterns (dedup, join strategy, catalog provenance) are annotated
+
+**Still outstanding (carried from earlier today):**
+- `COMBINED_matched.csv` does not exist — run `fawcett_crossmatch_multi.py` to regenerate
+- `candidates_to_csv.py` still references old column names (`Jmag_2mass`, `w1mpro`, etc.) — not yet updated
+- `COMBINED_SEDs_unred.py` still references old column names (`Jmag_2mass`, etc.)
+- CLAUDE.md filter directory still listed as `filters/` (actual: `data/filters/`)
+- Crossmatch radius not yet optimized (2 arcsec for all catalogs)
+- Input CSV structure for `COMBINED_SEDs_unred_candidates.py` (merged Fawcett+W2M columns) not yet verified
+
+**Progress state:**
+
+| Stage | Status |
+|---|---|
+| Crossmatch scripts | `fawcett_crossmatch_multi.py`, `w2m_crossmatch_multi.py`, `combine_catalogs.py` ready; outputs must be regenerated |
+| SED construction | In progress (notebook 02 migrated) |
+| Unreddened template | In progress (notebook 03 migrated) |
+| Color-color plots | In progress (notebook 04 stub) |
+| Candidate SED script | Supports Fawcett + W2M loops; commented; not yet re-run |
+| Candidate SED figures | Two figures from 2026-06-29 session in `figures/` |
+| Code documentation | All recently changed scripts commented for sharing |
+
+**Next steps:**
+1. Update column names in `candidates_to_csv.py` (`Jmag_2mass` → `Jmag`, `w1mpro` → `W1mag`, etc.) and `COMBINED_SEDs_unred.py`
+2. Run `fawcett_crossmatch_multi.py` → `w2m_crossmatch_multi.py` → `combine_catalogs.py` in sequence to regenerate matched CSVs
+3. Re-run `candidates_to_csv.py` to refresh UV-excess candidate list from new crossmatch output
+4. Verify merged input CSV structure then run `COMBINED_SEDs_unred_candidates.py` to inspect candidate SEDs
+5. Update CLAUDE.md filter directory entry from `filters/` to `data/filters/`
+
+---
+
+## Session — 2026-07-01
+
+**What we did:**
+- Created `scripts/ebv_uv_excess_histogram.py`: new script that loads `data/matched/FINAL_COMBINED_QSOs.csv`, applies the same `uv_excess_mask` logic as `candidates_to_csv.py` (two branches: NUV upturn `NUV/g > 1 & g/r < 1`; patchy geometry `FUV/NUV > 1 & NUV/g < 1`; E(B-V) > 0.2 for Fawcett rows), and plots a histogram of E(B-V) for UV-excess vs. non-UV-excess QSOs
+- Script restricts to Fawcett rows with valid E(B-V) (5,451 rows); W2M rows are excluded from the histogram since they lack the Fawcett E(B-V) column
+- User iteratively adjusted: bin width (0.05 → 0.1 → 0.01 → 0.1 via user edits), removed `OUT_FILE` save, switched to log y-scale (`plt.yscale('log')`), removed `ebv_max` percentile clip in favour of fixed `np.arange(0, 2 + 0.1, 0.1)`, renamed `tbl` → `table` throughout, removed `fawcett_mask` intermediate variable
+- Script confirmed to run without errors: 5,451 Fawcett rows, 18 UV-excess sources
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Crossmatch scripts | `fawcett_crossmatch_multi.py`, `w2m_crossmatch_multi.py`, `combine_catalogs.py` ready; `COMBINED_matched.csv` must be regenerated |
+| `FINAL_COMBINED_QSOs.csv` | Exists in `data/matched/`; 5,451+ rows with Fawcett + W2M sources |
+| SED construction | In progress (notebook 02 migrated) |
+| Unreddened template | In progress (notebook 03 migrated) |
+| Color-color plots | In progress (notebook 04 stub) |
+| Candidate SED script | Supports Fawcett + W2M loops; commented; not yet re-run |
+| E(B-V) histogram | New script `ebv_uv_excess_histogram.py`; runs cleanly; log y-scale; 0.1-wide bins |
+
+**Still outstanding (carried forward):**
+- `COMBINED_matched.csv` does not exist — run `fawcett_crossmatch_multi.py` to regenerate
+- `candidates_to_csv.py` still references old column names (`Jmag_2mass`, `w1mpro`, etc.)
+- `COMBINED_SEDs_unred.py` still references old column names
+- CLAUDE.md filter directory still listed as `filters/` (actual: `data/filters/`)
+- Crossmatch radius not yet optimized (2 arcsec for all catalogs)
+
+**Next steps:**
+1. Update column names in `candidates_to_csv.py` and `COMBINED_SEDs_unred.py`
+2. Run `fawcett_crossmatch_multi.py` → `w2m_crossmatch_multi.py` → `combine_catalogs.py` to regenerate matched CSVs
+3. Re-run `candidates_to_csv.py` to refresh the UV-excess candidate list
+4. Inspect candidate SEDs with `COMBINED_SEDs_unred_candidates.py`
+5. Update CLAUDE.md filter directory entry from `filters/` to `data/filters/`

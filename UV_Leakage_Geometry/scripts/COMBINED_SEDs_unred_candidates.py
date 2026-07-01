@@ -201,7 +201,7 @@ for index in range(len(table)):
     plot_sed(index, targetID[index], RA[index], DEC[index], redshift[index])
 
 # Loop 2: W2M candidates — rows where zsp > 0
-# zsp == 0.0 indicates a Fawcett row (no W2M spectroscopic redshift); skip
+# zsp == 0.0 indicates a Fawcett row 
 designation = np.array(table['designation'], dtype=str)
 ra_w2m  = mag_arr(table['ra'])
 dec_w2m = mag_arr(table['dec'])

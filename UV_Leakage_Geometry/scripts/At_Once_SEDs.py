@@ -28,7 +28,7 @@ from scipy.optimize import curve_fit
 
 #from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
-file = '/home/agklaros/Documents/UV_Leakage_Geometry/data/matched/UKPSAWG_matched.csv'
+file = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates.csv'
 table = Table.read(file)
 
 
@@ -103,7 +103,7 @@ for index, name in enumerate(targetID):
         flam_g.value[index], flam_r.value[index], flam_i.value[index], flam_z.value[index], flam_y.value[index],flam_Y.value[index],flam_J.value[index],flam_H.value[index],flam_K.value[index],
         flam_w1.value[index], flam_w2.value[index], flam_w3.value[index], flam_w4.value[index]],
              marker='o', linestyle='-', alpha=0.7,
-             label=f"{name} (z={round(zsp, 3)})")
+             label=f"{name} (z={zsp})")
 
 
 plt.xscale('log')

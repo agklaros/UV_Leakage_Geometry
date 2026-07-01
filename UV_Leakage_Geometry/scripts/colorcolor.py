@@ -31,7 +31,7 @@ from scipy.optimize import curve_fit
 
 #from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
-file = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/COMBINED_matched.csv'
+file = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates.csv'
 table = Table.read(file)
 
 
@@ -42,7 +42,7 @@ redshift = (table['Z'])
 ebv = (table['EBV'])
 
 
-# define the wavelength array for g, r, i, z, y, w1, w2, w3, w4
+# define the wavelength array
 
 lam = [1549, 2303, 4810, 6170, 7520, 8660, 9620] * u.AA
 
@@ -74,17 +74,6 @@ flam_z[flam_z > (1e-11 * su.FLAM)] = np.nan
 flam_y = (np.array(table['ymag'])*u.ABmag).to((su.FLAM), u.spectral_density(lam[6]))
 flam_y[flam_y > (1e-11 * su.FLAM)] = np.nan
 
-#UKIDSS (10305, 12483, 16313, 22010)
-
-
-
-
-# WISE (33680, 46180, 120820, 221940)
-# flam_w1 = (np.array(table['W1mag']+2.699) * u.ABmag).to((su.FLAM), u.spectral_density(lam[7]))
-# flam_w2 = (np.array(table['W2mag']+3.339) * u.ABmag).to((su.FLAM), u.spectral_density(lam[8]))
-# flam_w3 = (np.array(table['W3mag']+5.174) * u.ABmag).to((su.FLAM), u.spectral_density(lam[9]))
-# flam_w4 = (np.array(table['W4mag']+6.620) * u.ABmag).to((su.FLAM), u.spectral_density(lam[10]))
-
 
 FUVmags = np.array(table['FUVmag'])
 NUVmags = np.array(table['NUVmag'])
@@ -100,26 +89,27 @@ gr = gmags - rmags
 
 
 #Only display E(B-V) > 0.2:
-ebv[ebv < 0.2] = np.nan
+#ebv[ebv < 0.2] = np.nan
 
 
 
 plt.figure(figsize=(10, 10))
-sc = plt.scatter(nuvg, fuvnuv, c=ebv, cmap='inferno', s=100)
+sc = plt.scatter(nuvg, gr, c=redshift, cmap='inferno', s=100)
 
 
 #Cursor to show each DESI TARGETID
-cursor = mplcursors.cursor(sc, hover=True)
-@cursor.connect("add")
-def on_add(sel):
-    idx = sel.index
-    sel.annotation.set_text(f"TARGETID: {targetID[idx]}")
+# cursor = mplcursors.cursor(sc, hover=True)
+# @cursor.connect("add")
+# def on_add(sel):
+#     idx = sel.index
+#     sel.annotation.set_text(f"RA: {ra[idx]}")
 
+plt.title('Color vs Color for 24 QSOs with UV Excess')
 plt.colorbar(label='E(B-V)')
 plt.axhline(y=0)
 plt.axvline(x=0)
-plt.xlabel('nuvg <0')
-plt.ylabel('fuvnuv >0')
+plt.xlabel('G-R <0')
+plt.ylabel('NUV-G >0')
 plt.show()
     
 
