@@ -378,3 +378,83 @@
 3. Decide whether to keep the g-r/r-i criterion permanently; if kept, document it in `config/qso_params.yaml` and `CLAUDE.md`
 4. Spot-check a few renamed scripts (e.g. `scripts/matching/w2m_crossmatch_multi.py`, `scripts/seds/DESI_SEDs.py`) to confirm hardcoded paths inside were updated correctly and nothing regressed from the mechanical rename
 5. Update CLAUDE.md's directory layout section to reflect the new `scripts/seds/`, `scripts/colorcolor/`, `scripts/matching/` subfolders
+
+---
+
+## Session — 2026-07-03 (third session)
+
+**What we did:**
+- Fixed `scripts/colorcolor/ebv_uv_excess_histogram.py`, which still pointed at the stale pre-rename `FINAL_COMBINED_QSOs.csv` (5,451 DESI-only rows): `DATA_FILE` updated to the current canonical combined catalog `data/matched/FINAL_COMBINED_QSOs_W2M.csv` (5,489 rows, DESI + the new VLASS-based W2M sample)
+- Verified column compatibility before running: confirmed `EBV`/`gmag`/`rmag` (DESI) and `ebv`/`gmag_2`/`rmag_2`/`src` (W2M) all present in the new file; re-ran the script non-interactively (Agg backend) to confirm no regressions — 5,470 DESI rows / 18 UV-excess (count unchanged from before the rename, as expected), plus 19 W2M rows
+- Discovered W2M rows carry their own lowercase `ebv` column (all 19 rows populated, median ~0.3) — previously assumed W2M lacked E(B-V) entirely; this made a W2M-only E(B-V) histogram possible
+- Extended the script in two steps at user request:
+  1. Added descriptive titles and split into three separate DESI+W2M-combined / DESI-only / W2M-only E(B-V) histograms (each via a shared `plot_ebv_histogram()` helper)
+  2. Refactored again so all three histograms render as subplots in one figure (`plt.subplots(1, 3, ...)`) with a shared `fig.suptitle`, rather than three separate figure windows
+- Final verified counts: combined 5,489 rows / 29 UV-excess (18 DESI + 11 W2M); DESI-only 5,470 / 18; W2M-only 19 / 11
+- Advisory-mode → editing-mode transition happened mid-session (via `/resume-editing`); no conflicting uncommitted work was found at that checkpoint
+
+**What this resolves:**
+- The E(B-V) histogram now reflects the current, post-rename canonical sample (DESI + new W2M/VLASS-based catalog) instead of the stale DESI-only file
+- Script now supports at-a-glance comparison of DESI vs. W2M E(B-V) distributions in a single figure
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| `ebv_uv_excess_histogram.py` | Fixed to read `FINAL_COMBINED_QSOs_W2M.csv`; now plots 3 side-by-side subplots (combined / DESI-only / W2M-only) with titles; verified to run cleanly |
+| Everything else | Unchanged from previous session (see prior entry) |
+
+**Blockers / open questions (carried over, unchanged):**
+- `colorcolor_uv_excess_candidates_w2m.py` (candidates-only, connector-line variant) still not recreated
+- 52 SED PNGs from 2026-07-03 morning still sitting in `~/Downloads/`, not reviewed or moved to `figures/`
+- 17 new g-r/r-i-only DESI UV-excess candidates still unvalidated visually
+- Decision on keeping the g-r/r-i criterion permanently still pending
+- Crossmatch radius (2″) still unoptimized; four legacy matched CSV variants never compared via `/validate-crossmatch`
+- Note: W2M-only E(B-V) histogram is based on only 19 rows (11 flagged UV-excess) — too small a sample to draw strong conclusions from in isolation
+
+**Suggested next steps:**
+1. Visually inspect the new 3-panel E(B-V) histogram figure, particularly the W2M-only panel given its small sample size
+2. Move the 52 SED PNGs from `~/Downloads/` into `figures/` and review the 17 unvalidated g-r/r-i DESI candidates
+3. Decide whether to keep the g-r/r-i criterion permanently; document in `config/qso_params.yaml` and `CLAUDE.md` if kept
+4. Recreate `colorcolor_uv_excess_candidates_w2m.py` if still wanted
+5. Update CLAUDE.md's directory layout section for the `scripts/seds/`, `scripts/colorcolor/`, `scripts/matching/` subfolders (still outstanding from prior session)
+
+---
+
+## Session — 2026-07-03 (third session)
+
+**What we did:**
+- Fixed `scripts/colorcolor/ebv_uv_excess_histogram.py`, which still pointed at the stale pre-rename `FINAL_COMBINED_QSOs.csv` (5,451 DESI-only rows): `DATA_FILE` updated to the current canonical combined catalog `data/matched/FINAL_COMBINED_QSOs_W2M.csv` (5,489 rows, DESI + the new VLASS-based W2M sample)
+- Verified column compatibility before running: confirmed `EBV`/`gmag`/`rmag` (DESI) and `ebv`/`gmag_2`/`rmag_2`/`src` (W2M) all present in the new file; re-ran the script non-interactively (Agg backend) to confirm no regressions — 5,470 DESI rows / 18 UV-excess (count unchanged from before the rename, as expected), plus 19 W2M rows
+- Discovered W2M rows carry their own lowercase `ebv` column (all 19 rows populated, median ~0.3) — previously assumed W2M lacked E(B-V) entirely; this made a W2M-only E(B-V) histogram possible
+- Extended the script in two steps at user request:
+  1. Added descriptive titles and split into three separate DESI+W2M-combined / DESI-only / W2M-only E(B-V) histograms (each via a shared `plot_ebv_histogram()` helper)
+  2. Refactored again so all three histograms render as subplots in one figure (`plt.subplots(1, 3, ...)`) with a shared `fig.suptitle`, rather than three separate figure windows
+- Final verified counts: combined 5,489 rows / 29 UV-excess (18 DESI + 11 W2M); DESI-only 5,470 / 18; W2M-only 19 / 11
+- Advisory-mode → editing-mode transition happened mid-session (via `/resume-editing`); no conflicting uncommitted work was found at that checkpoint
+
+**What this resolves:**
+- The E(B-V) histogram now reflects the current, post-rename canonical sample (DESI + new W2M/VLASS-based catalog) instead of the stale DESI-only file
+- Script now supports at-a-glance comparison of DESI vs. W2M E(B-V) distributions in a single figure
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| `ebv_uv_excess_histogram.py` | Fixed to read `FINAL_COMBINED_QSOs_W2M.csv`; now plots 3 side-by-side subplots (combined / DESI-only / W2M-only) with titles; verified to run cleanly |
+| Everything else | Unchanged from previous session (see prior entry) |
+
+**Blockers / open questions (carried over, unchanged):**
+- `colorcolor_uv_excess_candidates_w2m.py` (candidates-only, connector-line variant) still not recreated
+- 52 SED PNGs from 2026-07-03 morning still sitting in `~/Downloads/`, not reviewed or moved to `figures/`
+- 17 new g-r/r-i-only DESI UV-excess candidates still unvalidated visually
+- Decision on keeping the g-r/r-i criterion permanently still pending
+- Crossmatch radius (2″) still unoptimized; four legacy matched CSV variants never compared via `/validate-crossmatch`
+- Note: W2M-only E(B-V) histogram is based on only 19 rows (11 flagged UV-excess) — too small a sample to draw strong conclusions from in isolation
+
+**Suggested next steps:**
+1. Visually inspect the new 3-panel E(B-V) histogram figure, particularly the W2M-only panel given its small sample size
+2. Move the 52 SED PNGs from `~/Downloads/` into `figures/` and review the 17 unvalidated g-r/r-i DESI candidates
+3. Decide whether to keep the g-r/r-i criterion permanently; document in `config/qso_params.yaml` and `CLAUDE.md` if kept
+4. Recreate `colorcolor_uv_excess_candidates_w2m.py` if still wanted
+5. Update CLAUDE.md's directory layout section for the `scripts/seds/`, `scripts/colorcolor/`, `scripts/matching/` subfolders (still outstanding from prior session)

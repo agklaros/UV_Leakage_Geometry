@@ -11,3 +11,5 @@ Append a new dated entry (use today's date) with:
 - Suggested next steps
 
 Read the existing HANDOFF.md first to match its format and append after the last entry. Do not overwrite previous entries.
+
+After HANDOFF.md is updated, run `/push-to-github` to stage, commit, and push all changes (including the HANDOFF.md update) to the GitHub remote.
