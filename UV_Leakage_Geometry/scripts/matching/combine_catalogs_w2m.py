@@ -1,16 +1,16 @@
 import numpy as np
 from astropy.table import Table, vstack, unique
 
-FAWCETT_CSV = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/Fawcett_COMBINED_matched.csv"
-W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_VLASS_COMBINED_matched.csv"
-FINAL_OUT   = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/FINAL_COMBINED_QSOs_VLASS.csv"
+DESI_CSV    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/DESI_COMBINED_matched.csv"
+W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_COMBINED_matched.csv"
+FINAL_OUT   = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/FINAL_COMBINED_QSOs_W2M.csv"
 
 Column_Keys = ['FUVmag', 'NUVmag', 'ymag', 'yAperMag3', 'j_1AperMag3', 'hAperMag3', 'kAperMag3']
 
-fawcett = Table.read(FAWCETT_CSV, format='csv')
-w2m     = Table.read(W2M_CSV,     format='csv')
+desi = Table.read(DESI_CSV, format='csv')
+w2m  = Table.read(W2M_CSV,  format='csv')
 
-combined = vstack([fawcett, w2m], join_type='outer')
+combined = vstack([desi, w2m], join_type='outer')
 n_before = len(combined)
 
 # unique() requires no masked values; fill with 0.0 temporarily,

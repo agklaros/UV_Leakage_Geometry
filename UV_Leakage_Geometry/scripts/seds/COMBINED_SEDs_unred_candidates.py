@@ -188,8 +188,8 @@ def plot_sed(index, name, ra, dec, zsp):
     plt.show()
 
 
-# Loop 1: Fawcett candidates — rows where Z > 0
-# Z == 0.0 indicates a W2M row (no Fawcett redshift); skip
+# Loop 1: DESI candidates — rows where Z > 0
+# Z == 0.0 indicates a W2M row (no DESI redshift); skip
 targetID = np.array(table['TARGETID'], dtype=str)
 redshift = mag_arr(table['Z'])
 RA       = mag_arr(table['RA'])
@@ -201,7 +201,7 @@ for index in range(len(table)):
     plot_sed(index, targetID[index], RA[index], DEC[index], redshift[index])
 
 # Loop 2: W2M candidates — rows where zsp > 0
-# zsp == 0.0 indicates a Fawcett row 
+# zsp == 0.0 indicates a DESI row
 designation = np.array(table['designation'], dtype=str)
 ra_w2m  = mag_arr(table['ra'])
 dec_w2m = mag_arr(table['dec'])

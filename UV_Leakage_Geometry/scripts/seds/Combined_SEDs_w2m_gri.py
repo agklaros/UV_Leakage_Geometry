@@ -2,6 +2,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy.io import ascii
@@ -15,9 +17,10 @@ from synphot.models import Empirical1D
 from synphot.observation import Observation
 
 
-file = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates_vlass_gri.csv"
+file = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates_w2m_gri.csv"
 filtdir = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/filters/"
 templateQSO = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/templates/qso_template.txt"
+outdir = "/home/agklaros/Downloads/"
 
 table = Table.read(file)
 
@@ -179,13 +182,17 @@ def plot_sed(index, name, ra, dec, zsp):
     
     plt.loglog()
     plt.title(f'RA = {ra:.4f}   DEC = {dec:.4f}')
+    plt.ylim(1e-18, 2e-16)
     plt.legend(fontsize=8)
     plt.tight_layout()
-    plt.show()
+
+    safe_name = "".join(c if (c.isalnum() or c in "._-") else "_" for c in str(name))
+    plt.savefig(f"{outdir}SED_{safe_name}.png", dpi=150)
+    plt.close()
 
 
-# Loop 1: Fawcett candidates — rows where Z > 0
-# Z == 0.0 indicates a W2M row (no Fawcett redshift); skip
+# Loop 1: DESI candidates — rows where Z > 0
+# Z == 0.0 indicates a W2M row (no DESI redshift); skip
 targetID = np.array(table['TARGETID'], dtype=str)
 redshift = mag_arr(table['Z'])
 RA       = mag_arr(table['RA'])
@@ -196,8 +203,8 @@ for index in range(len(table)):
         continue
     plot_sed(index, targetID[index], RA[index], DEC[index], redshift[index])
 
-# Loop 2: W2M-VLASS candidates — rows where zsp > 0
-# zsp == 0.0 indicates a Fawcett row
+# Loop 2: W2M candidates — rows where zsp > 0
+# zsp == 0.0 indicates a DESI row
 designation = np.array(table['designation'], dtype=str)
 ra_w2m  = mag_arr(table['ra'])
 dec_w2m = mag_arr(table['dec'])

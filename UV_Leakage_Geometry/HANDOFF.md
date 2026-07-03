@@ -312,3 +312,69 @@
 3. If kept, update `config/qso_params.yaml` and CLAUDE.md's UV-excess criterion description to document the third branch
 4. Consider running `/review-uv-excess` against the new `_vlass_gri` candidate list once validated
 5. Update CLAUDE.md filter directory entry from `filters/` to `data/filters/` (carried over from prior sessions)
+
+---
+
+## Session — 2026-07-03 [CHECKPOINT]
+
+**What's been done so far:**
+- Identified `data/matched/uv_excess_candidates_vlass_gri.csv` (51 candidates: 35 Fawcett + 16 W2M-VLASS) as the current Fawcett+VLASS UV-excess candidate list, per last session's g-r/r-i criterion work
+- Modified `scripts/Combined_SEDs_vlass_gri.py` (the SED plotter for the 51 gri candidates, left interactive at end of 2026-07-02 session under the name `Fawcett_SEDs_vlass_gri.py`) at user request:
+  - Switched matplotlib to the non-interactive `Agg` backend
+  - Added `outdir = "/home/agklaros/Downloads/"`
+  - Replaced `plt.show()` with a sanitized-filename `plt.savefig(f"{outdir}SED_{safe_name}.png", dpi=150)` + `plt.close()`
+  - No `os`/`re` imports used (per user preference) — filename sanitization done with a plain string comprehension
+- Ran the modified script: generated and saved 52 SED PNGs to `~/Downloads/` (one per candidate row, `SED_<TARGETID or designation>.png`)
+
+**Current working state:**
+- `scripts/Combined_SEDs_vlass_gri.py` now runs headlessly and saves to Downloads instead of displaying interactively — this diverges from the plan in the 2026-07-02 entry, which called for interactive inspection by the user. If interactive inspection of individual SEDs is still wanted, this script's behavior has changed.
+- 52 PNGs sitting in `~/Downloads/SED_*.png`, not yet copied into the repo's `figures/` directory
+- No other files changed this session
+
+**What's being worked on next:**
+- Awaiting user direction — likely next step is visual review of the saved SED PNGs (especially the 17 new g-r/r-i-only Fawcett candidates flagged as unvalidated in the prior session), then a decision on whether to keep the g-r/r-i branch permanently (per open question carried from 2026-07-02)
+
+---
+
+## Session — 2026-07-03 (second session)
+
+**What we did:**
+- Built a new dual-axis color-color script, `scripts/colorcolor_vlass_gri.py`, reading `data/matched/FINAL_COMBINED_QSOs_VLASS.csv` (later renamed — see rename section below):
+  - Blue scatter (NUV/G vs FUV/NUV) and red scatter (G/R vs NUV/G) share one plot box via `twiny().twinx()`, each with its own colored axis labels/ticks
+  - Switched all colors from magnitude differences (subtraction) to flux ratios (division), matching the codebase's existing UV-excess convention; reference lines moved from x=0/y=0 to x=1/y=1
+  - Added a zero-mask: rows where any underlying mag (FUV/NUV/g/r/i) is 0 are set to NaN so bad/missing photometry doesn't plot
+  - Set both scatters to `alpha=0.5` so overlapping blue/red points remain visible instead of red fully occluding blue
+  - Iterated on a per-QSO connector line (drawing a line between each source's two data points across the two independent data-coordinate systems, using a figure-fraction transform) — added, then removed per user request from this file
+  - Note: a candidates-only variant (`colorcolor_uv_excess_candidates_vlass.py`, with connector lines retained) was requested and written earlier in the session but never actually persisted to disk — confirmed missing at session end. Not recreated; flagged to user.
+- Executed a large project-wide renaming and reorganization via a delegated agent (git-tracked, nothing committed until this session's close):
+  - **Fawcett → DESI**: renamed `fawcett_crossmatch_multi.py` → `desi_crossmatch_multi.py`, `Fawcett_SEDs.py`/`Fawcett_SEDs_unred.py` → `DESI_SEDs.py`/`DESI_SEDs_unred.py`, `Fawcett_COMBINED_matched.csv` → `DESI_COMBINED_matched.csv`, `topcat_fawcett_matches.csv` → `topcat_desi_matches.csv`, both `matchhist_*_Fawcett.png` figures → `*_DESI.png`; updated identifiers/strings/comments throughout. Literature citations ("Fawcett+2023", "Fawcett et al. 2023") deliberately left unchanged in CLAUDE.md, docs, and notebooks — those refer to the source paper, not project jargon.
+  - **w2m/vlass → W2M**: the current VLASS-based W2M pipeline becomes the canonical `W2M_*`/`w2m_*` naming (e.g. `w2m_vlass_crossmatch_multi.py` → `w2m_crossmatch_multi.py`, `W2M_VLASS_COMBINED_matched.csv` → `W2M_COMBINED_matched.csv`, `candidates_to_csv_vlass*.py` → `candidates_to_csv_w2m*.py`, `Combined_SEDs_vlass_gri.py` → `Combined_SEDs_w2m_gri.py`, `colorcolor_vlass_gri.py` → `colorcolor_w2m_gri.py`). The old pre-VLASS W2M pipeline was disambiguated with a `_legacy` suffix to avoid collisions (`w2m_crossmatch_multi.py` → `w2m_legacy_crossmatch_multi.py`, `W2M_SEDs*.py` → `W2M_legacy_SEDs*.py`, `W2M_matched.csv`/`W2M_COMBINED_matched.csv` → `W2M_legacy_matched.csv`/`W2M_legacy_COMBINED_matched.csv`). Astronomical `W2`/`W2mag` (WISE band 2) references were correctly left untouched — unrelated to the W2M project acronym.
+  - **`data/raw/` left completely untouched** (per CLAUDE.md immutability rule) — `W2M_QSOs.csv` and `FULL_W2M_SAMPLE_FIRST_VLASS.csv` keep their original names; scripts referencing these raw paths keep the raw filename strings unchanged.
+  - **New scripts/ subfolders created**: `scripts/seds/` (SED construction/plotting scripts), `scripts/colorcolor/` (color-color and UV-excess candidate-selection scripts), `scripts/matching/` (crossmatch and catalog-combining scripts). `histogram.py`, `histogram2.py`, `Xsquared.py`, `Xsquared_seq.py` left at `scripts/` top level as ambiguous/utility.
+  - All moves/renames done via `git mv` to preserve history; verified via grep that no unintended "fawcett"/"vlass" references remain in code (only legitimate literature citations and historical HANDOFF.md log entries, which were left as-is since they're a record of the past).
+  - `.claude/` and top-level `CLAUDE.md` were not touched by the rename (out of scope; project-level `UV_Leakage_Geometry/CLAUDE.md` also left alone since its "Fawcett+2023" mentions are citations).
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Crossmatch scripts | Renamed and reorganized into `scripts/matching/`: `desi_crossmatch_multi.py` (DESI), `w2m_crossmatch_multi.py` (canonical, VLASS-based), `w2m_legacy_crossmatch_multi.py` (old 46-row sample), `combine_catalogs.py`, `combine_catalogs_w2m.py` |
+| SED scripts | Reorganized into `scripts/seds/`; `Combined_SEDs_w2m_gri.py` (formerly `Combined_SEDs_vlass_gri.py`) last run 2026-07-03 morning, produced 52 PNGs in `~/Downloads/` (not yet copied to `figures/`) |
+| Color-color / candidate-selection scripts | Reorganized into `scripts/colorcolor/`; new `colorcolor_w2m_gri.py` (formerly `colorcolor_vlass_gri.py`) built this session with dual flux-ratio axes, zero-masking, alpha blending; connector-line feature removed from this file per user request |
+| Data files | `DESI_COMBINED_matched.csv`, `W2M_COMBINED_matched.csv` (canonical, was VLASS), `W2M_legacy_*` (old pipeline), `FINAL_COMBINED_QSOs_W2M.csv`, `uv_excess_candidates_w2m.csv`, `uv_excess_candidates_w2m_gri.csv` (51 candidates: 35 DESI + 16 W2M) — all renamed from prior `vlass`/`Fawcett` names |
+| `data/raw/` | Untouched, as required |
+
+**Blockers / open questions:**
+- `colorcolor_uv_excess_candidates_vlass.py` (candidates-only color-color plot with connector lines) was requested earlier this session but never persisted to disk — needs to be recreated under new naming (`colorcolor_uv_excess_candidates_w2m.py`) if still wanted
+- 52 SED PNGs from the previous session are still sitting in `~/Downloads/`, not yet moved into `figures/` or reviewed
+- The 17 new g-r/r-i-only DESI (formerly Fawcett) UV-excess candidates from 2026-07-02 are still unvalidated — no visual inspection has happened yet
+- Decision not yet made on whether to keep the g-r/r-i selection branch permanently (carried over from 2026-07-02)
+- Longstanding carried-over items: crossmatch radius (2″) still unoptimized; four legacy matched CSV variants (UKPSAWG, PSAWG, PSG, UKPSGAW) never compared via `/validate-crossmatch`
+- All renames/moves are staged in git but not yet committed as of this entry — commit happens as part of `/push-to-github` immediately following this HANDOFF update
+
+**Suggested next steps:**
+1. Recreate `colorcolor_uv_excess_candidates_w2m.py` if the candidates-only connector-line variant is still desired
+2. Review the 52 saved SED PNGs (move from `~/Downloads/` into `figures/` first), focusing on the 17 unvalidated g-r/r-i DESI candidates
+3. Decide whether to keep the g-r/r-i criterion permanently; if kept, document it in `config/qso_params.yaml` and `CLAUDE.md`
+4. Spot-check a few renamed scripts (e.g. `scripts/matching/w2m_crossmatch_multi.py`, `scripts/seds/DESI_SEDs.py`) to confirm hardcoded paths inside were updated correctly and nothing regressed from the mechanical rename
+5. Update CLAUDE.md's directory layout section to reflect the new `scripts/seds/`, `scripts/colorcolor/`, `scripts/matching/` subfolders

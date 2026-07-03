@@ -2,30 +2,28 @@ from astropy import units as u
 from astropy.table import Table, join, unique
 from astroquery.xmatch import XMatch
 
-# New W2M sample (FIRST/VLASS radio-matched); base catalog already includes
-# SDSS ugriz, 2MASS, AllWISE, and EBV. Restricted to spCl == 'redQSO' before matching.
+# W2M base catalog already includes SDSS ugriz and AllWISE/2MASS photometry from the W2M crossmatch
+# Legacy (pre-VLASS) pipeline; kept for reproducibility, superseded by w2m_crossmatch_multi.py
 BASE_DIR = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry"
-W2M_CSV  = f"{BASE_DIR}/data/raw/FULL_W2M_SAMPLE_FIRST_VLASS.csv"
-W2M_OUT  = f"{BASE_DIR}/data/matched/W2M_VLASS_COMBINED_matched.csv"
+W2M_CSV  = f"{BASE_DIR}/data/raw/W2M_QSOs.csv"
+W2M_OUT  = f"{BASE_DIR}/data/matched/W2M_legacy_COMBINED_matched.csv"
 RADIUS   = 2 * u.arcsec
 
 # gmag/rmag/imag/zmag conflict with SDSS cols already in base;
 # astropy suffixes them _1 (SDSS) and _2 (PS1) on the join
 OUT_FIELDS = [
-    'designation', 'ra', 'dec', 'zsp', 'spCl', 'ebv',
+    'designation', 'ra', 'dec', 'zsp',
     'umag', 'gmag_1', 'rmag_1', 'imag_1', 'zmag_1',
-    'jmag', 'hmag', 'kmag',
-    'w1mag', 'w2mag', 'w3mag', 'w4mag',
-    'FIRST_peak', 'FIRST_int', 'VLASS_peak', 'VLASS_int',
+    'j_m_2mass', 'h_m_2mass', 'k_m_2mass',
+    'w1mpro', 'w2mpro', 'w3mpro', 'w4mpro',
     'broad', 'src',
     'FUVmag', 'NUVmag',
     'gmag_2', 'rmag_2', 'imag_2', 'zmag_2', 'ymag',
     'yAperMag3', 'j_1AperMag3', 'hAperMag3', 'kAperMag3',
 ]
 
-# Load base catalog, restrict to redQSO
+# Load base catalog
 base = Table.read(W2M_CSV, format='csv')
-base = base[base['spCl'] == 'redQSO']
 
 # Match to PanSTARRS keeping only double matches
 mt_ps1 = XMatch.query(cat1=base, cat2="II/349/ps1", max_distance=RADIUS, colRA1='ra', colDec1='dec')

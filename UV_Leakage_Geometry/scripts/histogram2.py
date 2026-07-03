@@ -82,6 +82,6 @@ ax.set_ylabel("Number", fontsize=12)
 ax.grid(linestyle=":", alpha=0.5)
 ax.legend(loc="upper right")
 
-plt.title(target_catalog_id + " and Fawcett real and false matches")
+plt.title(target_catalog_id + " and DESI real and false matches")
 plt.tight_layout()
 plt.show()

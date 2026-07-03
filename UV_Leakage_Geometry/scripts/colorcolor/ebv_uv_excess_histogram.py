@@ -53,21 +53,21 @@ def uv_excess_mask(table, gmag_col, rmag_col, require_ebv=True):
 
 table = Table.read(DATA_FILE, format='csv')
 
-# Fawcett rows have EBV; W2M rows (src == 'w2m') use gmag_2/rmag_2 and lack EBV
+# DESI rows have EBV; W2M rows (src == 'w2m') use gmag_2/rmag_2 and lack EBV
 src = np.array(table['src'], dtype=str)
-is_fawcett = src != 'w2m'
+is_desi = src != 'w2m'
 
 uv_flag = np.zeros(len(table), dtype=bool)
-if np.any(is_fawcett):
-    uv_flag[is_fawcett] = uv_excess_mask(table[is_fawcett], gmag_col='gmag', rmag_col='rmag', require_ebv=True)
-if np.any(~is_fawcett):
-    uv_flag[~is_fawcett] = uv_excess_mask(table[~is_fawcett], gmag_col='gmag_2', rmag_col='rmag_2', require_ebv=False)
+if np.any(is_desi):
+    uv_flag[is_desi] = uv_excess_mask(table[is_desi], gmag_col='gmag', rmag_col='rmag', require_ebv=True)
+if np.any(~is_desi):
+    uv_flag[~is_desi] = uv_excess_mask(table[~is_desi], gmag_col='gmag_2', rmag_col='rmag_2', require_ebv=False)
 
 ebv_all = mag_arr(table['EBV'])
 
-# Only Fawcett rows carry E(B-V); restrict histogram to those rows
-ebv      = ebv_all[is_fawcett]
-uv_flag  = uv_flag[is_fawcett]
+# Only DESI rows carry E(B-V); restrict histogram to those rows
+ebv      = ebv_all[is_desi]
+uv_flag  = uv_flag[is_desi]
 
 
 bin_edges = np.arange(0, 2 + 0.1, 0.1)

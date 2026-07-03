@@ -6,8 +6,8 @@ from astropy.table import Table, vstack
 import astropy.units as u
 from synphot import units as su
 
-FAWCETT_CSV = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/Fawcett_COMBINED_matched.csv"
-W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_COMBINED_matched.csv"
+DESI_CSV    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/DESI_COMBINED_matched.csv"
+W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_legacy_COMBINED_matched.csv"
 out_file    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates.csv"
 
 lam_fuv = 1549 * u.AA
@@ -52,18 +52,18 @@ def uv_excess_mask(tbl, gmag_col, rmag_col, require_ebv=True):
 
 
 
-fawcett = Table.read(FAWCETT_CSV, format='csv')
-fawcett_mask = uv_excess_mask(fawcett, gmag_col='gmag', rmag_col='rmag', require_ebv=True)
-fawcett_cands = fawcett[fawcett_mask]
+desi = Table.read(DESI_CSV, format='csv')
+desi_mask = uv_excess_mask(desi, gmag_col='gmag', rmag_col='rmag', require_ebv=True)
+desi_cands = desi[desi_mask]
 
 
 
 w2m = Table.read(W2M_CSV, format='csv')
-w2m_mask = uv_excess_mask(w2m, gmag_col='gmag_2', rmag_col='rmag_2', require_ebv=False)  # W2M catalog lacks Fawcett EBV estimates
+w2m_mask = uv_excess_mask(w2m, gmag_col='gmag_2', rmag_col='rmag_2', require_ebv=False)  # W2M catalog lacks DESI EBV estimates
 w2m_cands = w2m[w2m_mask]
 
 
 
-candidates = vstack([fawcett_cands, w2m_cands], join_type='outer')
+candidates = vstack([desi_cands, w2m_cands], join_type='outer')
 candidates.write(out_file, format='csv', overwrite=True)
 

@@ -15,7 +15,7 @@ from synphot.models import Empirical1D
 from synphot.observation import Observation
 
 BASE_DIR    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry"
-file        = f"{BASE_DIR}/data/matched/W2M_matched.csv"
+file        = f"{BASE_DIR}/data/matched/W2M_legacy_matched.csv"
 filtdir     = f"{BASE_DIR}/filters/"
 templateQSO = f"{BASE_DIR}/templates/qso_template.txt"
 

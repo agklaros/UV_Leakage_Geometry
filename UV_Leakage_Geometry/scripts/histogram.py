@@ -79,7 +79,7 @@ ax.set_ylabel("Number", fontsize=12)
 ax.grid(True, linestyle=":", alpha=0.5)
 
 
-plt.title(target_catalog_id + " and Fawcett real and false matches")
+plt.title(target_catalog_id + " and DESI real and false matches")
 plt.tight_layout()
 plt.show()
 

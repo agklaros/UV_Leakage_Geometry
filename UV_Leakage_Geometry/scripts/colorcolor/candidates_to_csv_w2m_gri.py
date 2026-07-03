@@ -6,9 +6,9 @@ from astropy.table import Table, vstack
 import astropy.units as u
 from synphot import units as su
 
-FAWCETT_CSV = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/Fawcett_COMBINED_matched.csv"
-W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_VLASS_COMBINED_matched.csv"
-out_file    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates_vlass_gri.csv"
+DESI_CSV    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/DESI_COMBINED_matched.csv"
+W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_COMBINED_matched.csv"
+out_file    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates_w2m_gri.csv"
 
 lam_fuv = 1549 * u.AA
 lam_nuv = 2303 * u.AA
@@ -58,20 +58,20 @@ def uv_excess_mask(tbl, gmag_col, rmag_col, imag_col, require_ebv=True):
 
 
 
-fawcett = Table.read(FAWCETT_CSV, format='csv')
-fawcett_mask = uv_excess_mask(fawcett, gmag_col='gmag', rmag_col='rmag', imag_col='imag', require_ebv=True)
-fawcett_cands = fawcett[fawcett_mask]
+desi = Table.read(DESI_CSV, format='csv')
+desi_mask = uv_excess_mask(desi, gmag_col='gmag', rmag_col='rmag', imag_col='imag', require_ebv=True)
+desi_cands = desi[desi_mask]
 
 
-# New W2M sample is pre-restricted to spCl == 'redQSO' at crossmatch time (see
-# w2m_vlass_crossmatch_multi.py); ebv in this sample runs much lower than Fawcett's
-# (median ~0.03), so EBV>0.2 is not applied here, same as the original W2M pipeline.
+# W2M sample is pre-restricted to spCl == 'redQSO' at crossmatch time (see
+# w2m_crossmatch_multi.py); ebv in this sample runs much lower than DESI's
+# (median ~0.03), so EBV>0.2 is not applied here, same as the legacy W2M pipeline.
 w2m = Table.read(W2M_CSV, format='csv')
 w2m_mask = uv_excess_mask(w2m, gmag_col='gmag_2', rmag_col='rmag_2', imag_col='imag_2', require_ebv=False)
 w2m_cands = w2m[w2m_mask]
 
 
 
-candidates = vstack([fawcett_cands, w2m_cands], join_type='outer')
+candidates = vstack([desi_cands, w2m_cands], join_type='outer')
 candidates.write(out_file, format='csv', overwrite=True)
-print(f"  -> {len(fawcett_cands)} Fawcett + {len(w2m_cands)} W2M-VLASS = {len(candidates)} candidates written to {out_file}")
+print(f"  -> {len(desi_cands)} DESI + {len(w2m_cands)} W2M = {len(candidates)} candidates written to {out_file}")
