@@ -269,3 +269,46 @@
 3. Re-run `candidates_to_csv.py` to refresh the UV-excess candidate list
 4. Inspect candidate SEDs with `COMBINED_SEDs_unred_candidates.py`
 5. Update CLAUDE.md filter directory entry from `filters/` to `data/filters/`
+
+
+---
+
+## Session — 2026-07-02
+
+**What we did:**
+- Brought a new W2M input sample into the pipeline: `data/raw/FULL_W2M_SAMPLE_FIRST_VLASS.csv` (1,634 rows, includes FIRST/VLASS radio photometry, `spCl` classification, and a per-row `ebv` column — none of which existed in the old 46-row `W2M_QSOs.csv`)
+- Created `scripts/w2m_vlass_crossmatch_multi.py`: copy of `w2m_crossmatch_multi.py` adapted for the new column names (`jmag`/`hmag`/`kmag`, `w1mag`-`w4mag` instead of `j_m_2mass`, `w1mpro`, etc.) and restricted to `spCl == 'redQSO'` (118 of 1,634 rows) before crossmatching to PS1 (inner), GALEX (inner), UKIDSS (left) at 2 arcsec -> `data/matched/W2M_VLASS_COMBINED_matched.csv` (**38 rows** survive the PS1+GALEX double-match requirement)
+- Created `scripts/combine_catalogs_vlass.py`: same dedup logic as `combine_catalogs.py`, vstacks `Fawcett_COMBINED_matched.csv` + `W2M_VLASS_COMBINED_matched.csv` -> `data/matched/FINAL_COMBINED_QSOs_VLASS.csv` (**5,489 rows**, 1 duplicate removed). Old `FINAL_COMBINED_QSOs.csv` (5,451 rows) left untouched for comparison.
+- Created `scripts/candidates_to_csv_vlass.py`: same UV-excess criterion as `candidates_to_csv.py` (NUV upturn OR FUV/patchy-geometry branch), applied to the new combined catalog. W2M-VLASS rows use `require_ebv=False` (median `ebv` in this sample is ~0.03, much lower than Fawcett's, so an `EBV>0.2` cut would gut the sample) -> `data/matched/uv_excess_candidates_vlass.csv` (**34 candidates**: 18 Fawcett + 16 W2M-VLASS)
+- Extended the selection criterion: added a third branch `(g/r flux ratio > 1) & (r/i flux ratio < 1)` — the g-r/r-i analogue of the existing NUV/g branch — OR'd with the original two branches, in `scripts/candidates_to_csv_vlass_gri.py` -> `data/matched/uv_excess_candidates_vlass_gri.csv` (**51 candidates**: 35 Fawcett + 16 W2M-VLASS). New branch added 17 more Fawcett candidates; no new W2M-VLASS candidates (all 16 already captured by existing branches). Still well under the <100 target.
+- Created `scripts/Fawcett_SEDs_vlass_gri.py`: copy of `COMBINED_SEDs_unred_candidates.py` (the combined Fawcett+W2M SED plotter) pointed at `uv_excess_candidates_vlass_gri.csv`; left with interactive `plt.show()` per user request (not run non-interactively/saved — user will run it themselves)
+
+**Decisions made:**
+- New W2M sample replaces the old 46-row W2M_QSOs.csv going forward; old script/output kept as legacy, untouched
+- `spCl == 'redQSO'` filter applied at crossmatch time instead of an `EBV>0.2` cut for W2M rows (ebv values in this sample are too low for that cut to be meaningful)
+- New g-r/r-i criterion combined via OR with existing branches (expands rather than narrows the sample); written in the same flux-ratio convention as the existing NUV/g and FUV/NUV branches
+- All new pipeline variants use `_vlass` / `_vlass_gri` suffixed filenames rather than overwriting existing outputs, so old and new samples can be compared directly
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Fawcett crossmatch | Unchanged; `Fawcett_COMBINED_matched.csv` still current |
+| W2M crossmatch (new VLASS sample) | Done: `w2m_vlass_crossmatch_multi.py` -> `W2M_VLASS_COMBINED_matched.csv` (38 rows) |
+| Combined catalog (new) | Done: `combine_catalogs_vlass.py` -> `FINAL_COMBINED_QSOs_VLASS.csv` (5,489 rows) |
+| UV-excess candidates (original 2-branch criterion, new data) | Done: `uv_excess_candidates_vlass.csv` (34 candidates) |
+| UV-excess candidates (new 3-branch criterion incl. g-r/r-i) | Done: `uv_excess_candidates_vlass_gri.csv` (51 candidates) |
+| Candidate SED script (gri version) | Created (`Fawcett_SEDs_vlass_gri.py`); **not yet run** — left interactive for user |
+| Old pipeline (pre-VLASS) | Untouched; `FINAL_COMBINED_QSOs.csv`, `uv_excess_candidates.csv` still available for comparison |
+
+**Blockers / open questions:**
+- `Fawcett_SEDs_vlass_gri.py` has not been executed yet — user intends to run it interactively themselves
+- No visual inspection yet of the 17 newly-added Fawcett g-r/r-i candidates — unclear if they're genuine UV-excess sources or contamination from the looser optical-color criterion
+- Old outstanding items still apply: crossmatch radius (2 arcsec) not optimized; CLAUDE.md filter directory entry still says `filters/` instead of `data/filters/`; four old `data/matched/*_matched.csv` variants (UKPSAWG, PSAWG, PSG, UKPSGAW) still not compared via `/validate-crossmatch`
+
+**Suggested next steps:**
+1. Run `scripts/Fawcett_SEDs_vlass_gri.py` interactively to inspect all 51 candidate SEDs, especially the 17 new g-r/r-i-only Fawcett candidates
+2. Decide whether the g-r/r-i branch should be kept as a permanent addition to the UV-excess criterion or was exploratory
+3. If kept, update `config/qso_params.yaml` and CLAUDE.md's UV-excess criterion description to document the third branch
+4. Consider running `/review-uv-excess` against the new `_vlass_gri` candidate list once validated
+5. Update CLAUDE.md filter directory entry from `filters/` to `data/filters/` (carried over from prior sessions)
