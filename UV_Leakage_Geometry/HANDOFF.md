@@ -458,3 +458,38 @@
 3. Decide whether to keep the g-r/r-i criterion permanently; document in `config/qso_params.yaml` and `CLAUDE.md` if kept
 4. Recreate `colorcolor_uv_excess_candidates_w2m.py` if still wanted
 5. Update CLAUDE.md's directory layout section for the `scripts/seds/`, `scripts/colorcolor/`, `scripts/matching/` subfolders (still outstanding from prior session)
+
+---
+
+## Session — 2026-07-04
+
+**What we did:**
+- Created `scripts/colorcolor/ebv_uv_excess_fraction_barchart.py`, a new standalone script (existing `ebv_uv_excess_histogram.py` left untouched) that reads the canonical `data/matched/FINAL_COMBINED_QSOs_W2M.csv`, applies the same two-branch UV-excess criterion (NUV upturn / FUV-NUV upturn, DESI rows require `EBV > 0.2`) combined across DESI + W2M, bins E(B-V) into 0.1-wide bins (0 to 2), and plots a single bar chart of `excess_count / total_count` per bin (fraction of QSOs that are UV-excess, not raw counts)
+- Fixed the stale `DATA_FILE` path for the new script to the current machine's location (`/Users/alexgs/Documents/UV_Leakage_Geometry/UV_Leakage_Geometry/data/matched/FINAL_COMBINED_QSOs_W2M.csv`) rather than reusing the old `/home/agklaros/...` path still present in `ebv_uv_excess_histogram.py`
+- Ran the new script non-interactively (Agg backend) to verify: 29 total UV-excess sources (matches prior sessions' combined count), fraction rises from 0 (E(B-V) < 0.2, below DESI's threshold) to ~0.25–0.32 in the E(B-V) 0.2–0.6 range, then becomes noisy above E(B-V) ~0.9 where bins contain only 1–4 sources total
+
+**Decisions made:**
+- Kept this as a separate script rather than modifying `ebv_uv_excess_histogram.py`, per explicit user request — the two scripts now diverge (counts vs. fraction) and should probably stay that way unless the user asks to merge them
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| `ebv_uv_excess_histogram.py` | Unchanged from 2026-07-03 (3-panel counts histogram) |
+| `ebv_uv_excess_fraction_barchart.py` | New this session; single-panel fraction-of-UV-excess-per-bin bar chart; verified to run cleanly |
+| Everything else | Unchanged from previous session |
+
+**Blockers / open questions (carried over, unchanged):**
+- `colorcolor_uv_excess_candidates_w2m.py` (candidates-only, connector-line variant) still not recreated
+- 52 SED PNGs from 2026-07-03 morning still sitting in `~/Downloads/`, not reviewed or moved to `figures/`
+- 17 new g-r/r-i-only DESI UV-excess candidates still unvalidated visually
+- Decision on keeping the g-r/r-i criterion permanently still pending
+- Crossmatch radius (2″) still unoptimized; four legacy matched CSV variants never compared via `/validate-crossmatch`
+- New: high-E(B-V) bins (>0.9) in the fraction bar chart are based on only 1–4 sources each — not statistically meaningful in isolation, flagged to user in-session
+
+**Suggested next steps:**
+1. Decide whether the noisy high-E(B-V) bins in the new fraction bar chart should be excluded, capped, or annotated with sample-size caveats
+2. Move the 52 SED PNGs from `~/Downloads/` into `figures/` and review the 17 unvalidated g-r/r-i DESI candidates
+3. Decide whether to keep the g-r/r-i criterion permanently; document in `config/qso_params.yaml` and `CLAUDE.md` if kept
+4. Recreate `colorcolor_uv_excess_candidates_w2m.py` if still wanted
+5. Update CLAUDE.md's directory layout section for the `scripts/seds/`, `scripts/colorcolor/`, `scripts/matching/` subfolders (still outstanding from prior sessions)
