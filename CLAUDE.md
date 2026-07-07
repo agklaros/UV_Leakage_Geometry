@@ -29,7 +29,7 @@ jupyter notebook   # or: jupyter lab
 
 Required packages: `astropy`, `astroquery`, `synphot`, `numpy`, `pandas`, `matplotlib`, `pyyaml`.
 
-**Scripts in `scripts/` are reference implementations only.** They contain hardcoded absolute paths (currently `/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/`) and must not be run directly. Use the notebooks.
+**Scripts in `scripts/` are reference implementations only.** Paths are now derived from `Path(__file__).resolve().parents[N]` (portable across machines/devices), but the scripts are still not wired into the pipeline and must not be run directly. Use the notebooks.
 
 ## Pipeline
 

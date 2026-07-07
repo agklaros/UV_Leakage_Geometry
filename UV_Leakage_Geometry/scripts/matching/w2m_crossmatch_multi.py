@@ -1,10 +1,12 @@
+from pathlib import Path
+
 from astropy import units as u
 from astropy.table import Table, join, unique
 from astroquery.xmatch import XMatch
 
 # W2M sample (FIRST/VLASS radio-matched); base catalog already includes
 # SDSS ugriz, 2MASS, AllWISE, and EBV. Restricted to spCl == 'redQSO' before matching.
-BASE_DIR = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry"
+BASE_DIR = Path(__file__).resolve().parents[2]
 W2M_CSV  = f"{BASE_DIR}/data/raw/FULL_W2M_SAMPLE_FIRST_VLASS.csv"
 W2M_OUT  = f"{BASE_DIR}/data/matched/W2M_COMBINED_matched.csv"
 RADIUS   = 2 * u.arcsec

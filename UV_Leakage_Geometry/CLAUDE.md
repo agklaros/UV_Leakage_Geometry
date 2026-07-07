@@ -86,5 +86,5 @@ the UV leakage fraction as a function of E(B-V). A follow-up polarimetry campaig
 - [ ] Issue logged 2026-06-26: Do not match quasars to stars or galaxies — always verify SPECTYPE == QSO before analysis
 - [ ] Issue logged 2026-06-26: Verify unit consistency when combining bands — magnitudes must be converted to AB system before flux conversion (WISE and UKIDSS require Vega-to-AB offsets listed above)
 - [ ] Issue logged 2026-06-26: UV-excess candidate sample target is <100 QSOs — flag and investigate if the sample grows significantly larger
-- [ ] Issue logged 2026-07-06: `scripts/seds/unred.py`, `PSG_SEDs_unred.py`, `PSAWG_SEDs_unred.py`, and `DESI_SEDs_unred.py` hardcode `filtdir` as `UV_Leakage_Geometry/filters/`, but the real directory is `UV_Leakage_Geometry/data/filters/` — path is wrong even after machine-path updates
+- [x] Issue logged 2026-07-06, fixed 2026-07-07: `scripts/seds/unred.py`, `PSG_SEDs_unred.py`, `PSAWG_SEDs_unred.py`, and `DESI_SEDs_unred.py` hardcoded `filtdir` as `UV_Leakage_Geometry/filters/` instead of the real `UV_Leakage_Geometry/data/filters/` — corrected when all scripts were switched to `Path(__file__)`-relative paths
 - [ ] Issue logged 2026-07-06: `scripts/seds/W2M_legacy_SEDs.py` references `data/archive/W2M_QSOs.csv`, which does not exist — only `W2M_multi_2arc.csv` is present in `data/archive/`

@@ -1,14 +1,17 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+from pathlib import Path
+
 import numpy as np
 from astropy.table import Table, vstack
 import astropy.units as u
 from synphot import units as su
 
-DESI_CSV    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/DESI_COMBINED_matched.csv"
-W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_legacy_COMBINED_matched.csv"
-out_file    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates.csv"
+BASE_DIR    = Path(__file__).resolve().parents[2]
+DESI_CSV    = str(BASE_DIR / "data/matched/DESI_COMBINED_matched.csv")
+W2M_CSV     = str(BASE_DIR / "data/matched/W2M_legacy_COMBINED_matched.csv")
+out_file    = str(BASE_DIR / "data/matched/uv_excess_candidates.csv")
 
 lam_fuv = 1549 * u.AA
 lam_nuv = 2303 * u.AA

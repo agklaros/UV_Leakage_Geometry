@@ -1,6 +1,8 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table
@@ -14,9 +16,9 @@ from synphot import SpectralElement
 from synphot.models import Empirical1D
 from synphot.observation import Observation
 
-BASE_DIR    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry"
+BASE_DIR    = Path(__file__).resolve().parents[2]
 file        = f"{BASE_DIR}/data/matched/W2M_legacy_matched.csv"
-filtdir     = f"{BASE_DIR}/filters/"
+filtdir     = f"{BASE_DIR}/data/filters/"
 templateQSO = f"{BASE_DIR}/templates/qso_template.txt"
 
 table = Table.read(file)

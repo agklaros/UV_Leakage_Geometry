@@ -1,9 +1,12 @@
+from pathlib import Path
+
 from astropy import units as u
 from astropy.table import Table, join, unique
 from astroquery.xmatch import XMatch
 
-COMBINED_CSV = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/raw/COMBINED_QSOS_TAB.csv"
-COMBINED_OUT = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/COMBINED_matched.csv"
+BASE_DIR     = Path(__file__).resolve().parents[2]
+COMBINED_CSV = str(BASE_DIR / "data/raw/COMBINED_QSOS_TAB.csv")
+COMBINED_OUT = str(BASE_DIR / "data/matched/COMBINED_matched.csv")
 RADIUS       = 2 * u.arcsec
 
 BASE_COLS  = ['TARGETID', 'RA', 'DEC', 'Z', 'SPECTYPE', 'EBV', 'EBV_ERR']

@@ -29,7 +29,8 @@ from scipy.optimize import curve_fit
 
 from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
-file = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/UKPSAWG_matched.csv'
+BASE_DIR = Path(__file__).resolve().parents[2]
+file = str(BASE_DIR / "data/matched/UKPSAWG_matched.csv")
 table = Table.read(file)
 
 
@@ -44,8 +45,8 @@ ebv = (table['EBV'])
 lam = [1549, 2303, 4810, 6170, 7520, 8660, 9620,10305, 12483, 16313, 22010,33680, 46180, 120820, 221940] * u.AA
 
 # --- QSO template setup (from unred.py) ---
-filtdir = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/filters/'
-templateQSO = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/templates/qso_template.txt'
+filtdir = str(BASE_DIR / "data/filters/")
+templateQSO = str(BASE_DIR / "templates/qso_template.txt")
 _spec = ascii.read(str(templateQSO))
 templateWave = _spec['col1']
 templateFlux = _spec['col2']

@@ -1,6 +1,8 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table
@@ -15,9 +17,10 @@ from synphot.models import Empirical1D
 from synphot.observation import Observation
 
 
-file = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/uv_excess_candidates.csv"
-filtdir = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/filters/"
-templateQSO = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/templates/qso_template.txt"
+BASE_DIR = Path(__file__).resolve().parents[2]
+file = str(BASE_DIR / "data/matched/uv_excess_candidates.csv")
+filtdir = str(BASE_DIR / "data/filters/")
+templateQSO = str(BASE_DIR / "templates/qso_template.txt")
 
 table = Table.read(file)
 

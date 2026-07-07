@@ -1,13 +1,16 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.table import Table
 from synphot import units as su
 
-DATA_FILE = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/FINAL_COMBINED_QSOs_W2M.csv"
+BASE_DIR = Path(__file__).resolve().parents[2]
+DATA_FILE = str(BASE_DIR / "data/matched/FINAL_COMBINED_QSOs_W2M.csv")
 
 
 lam_fuv = 1549 * u.AA

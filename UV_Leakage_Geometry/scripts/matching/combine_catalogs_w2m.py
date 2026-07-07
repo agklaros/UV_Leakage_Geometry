@@ -1,9 +1,12 @@
+from pathlib import Path
+
 import numpy as np
 from astropy.table import Table, vstack, unique
 
-DESI_CSV    = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/DESI_COMBINED_matched.csv"
-W2M_CSV     = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/W2M_COMBINED_matched.csv"
-FINAL_OUT   = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/FINAL_COMBINED_QSOs_W2M.csv"
+BASE_DIR    = Path(__file__).resolve().parents[2]
+DESI_CSV    = str(BASE_DIR / "data/matched/DESI_COMBINED_matched.csv")
+W2M_CSV     = str(BASE_DIR / "data/matched/W2M_COMBINED_matched.csv")
+FINAL_OUT   = str(BASE_DIR / "data/matched/FINAL_COMBINED_QSOs_W2M.csv")
 
 Column_Keys = ['FUVmag', 'NUVmag', 'ymag', 'yAperMag3', 'j_1AperMag3', 'hAperMag3', 'kAperMag3']
 

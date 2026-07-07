@@ -28,7 +28,8 @@ from scipy.optimize import curve_fit
 
 #from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
-file = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/UKPSAWG_matched.csv'
+BASE_DIR = Path(__file__).resolve().parents[2]
+file = str(BASE_DIR / "data/matched/UKPSAWG_matched.csv")
 table = Table.read(file)
 
 
