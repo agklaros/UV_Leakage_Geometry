@@ -28,7 +28,7 @@ from scipy.optimize import curve_fit
 
 #from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
-file = '/home/agklaros/Documents/UV_Leakage_Geometry/data/archive/W2M_multi_2arc.csv'
+file = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/archive/W2M_multi_2arc.csv'
 table = Table.read(file)
 
 

@@ -28,7 +28,7 @@ from scipy.optimize import curve_fit
 
 #from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
-w2m_table_file = '/home/agklaros/Documents/UV_Leakage_Geometry/data/archive/W2M_QSOs.csv'
+w2m_table_file = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/archive/W2M_QSOs.csv'
 w2m_table = Table.read(w2m_table_file)
 
 redshift = (w2m_table['zsp'])

@@ -24,8 +24,8 @@ from synphot.models import Empirical1D
 from synphot.observation import Observation
 
 
-filtdir = '/home/agklaros/Documents/UV_Leakage_Geometry/filters/'
-templateQSO = '/home/agklaros/Documents/UV_Leakage_Geometry/templates/qso_template.txt'
+filtdir = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/filters/'
+templateQSO = '/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/templates/qso_template.txt'
 spec = ascii.read(str(templateQSO))
 templateWave = spec['col1']
 templateFlux = spec['col2']

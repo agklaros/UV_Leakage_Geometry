@@ -4,7 +4,7 @@ from astroquery.xmatch import XMatch
 import matplotlib.pyplot as plt
 import numpy as np
 
-csv_file = "/home/agklaros/Documents/UV_Leakage_Geometry/data/raw/QSO_Sample.csv" 
+csv_file = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/raw/QSO_Sample.csv" 
 real_catalog = Table.read(csv_file, format="csv")
 ra_col, dec_col = "RA", "DEC"
 

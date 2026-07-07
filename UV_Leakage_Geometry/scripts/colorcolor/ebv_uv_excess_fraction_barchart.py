@@ -7,7 +7,7 @@ import astropy.units as u
 from astropy.table import Table
 from synphot import units as su
 
-DATA_FILE = "/Users/alexgs/Documents/UV_Leakage_Geometry/UV_Leakage_Geometry/data/matched/FINAL_COMBINED_QSOs_W2M.csv"
+DATA_FILE = "/home/agklaros/Documents/UV_Leakage_Geometry-1/UV_Leakage_Geometry/data/matched/FINAL_COMBINED_QSOs_W2M.csv"
 
 
 lam_fuv = 1549 * u.AA
