@@ -27,7 +27,7 @@ cd UV_Leakage_Geometry
 jupyter notebook   # or: jupyter lab
 ```
 
-Required packages: `astropy`, `astroquery`, `synphot`, `numpy`, `pandas`, `matplotlib`, `pyyaml`.
+Required packages: `astropy`, `astroquery`, `synphot`, `numpy`, `pandas`, `matplotlib`, `pyyaml`, `quasar_unred`.
 
 **Scripts in `scripts/` are reference implementations only.** Paths are now derived from `Path(__file__).resolve().parents[N]` (portable across machines/devices), but the scripts are still not wired into the pipeline and must not be run directly. Use the notebooks.
 
@@ -35,10 +35,11 @@ Required packages: `astropy`, `astroquery`, `synphot`, `numpy`, `pandas`, `matpl
 
 Notebooks must be run in order:
 
-1. `notebooks/01_crossmatch.ipynb` — CDS XMatch (via `astroquery.xmatch`) to GALEX/PS1/UKIDSS/WISE → `data/matched/QSO_SED_Matches.csv`
-2. `notebooks/02_build_seds.ipynb` — Convert AB mags to F_λ (erg/s/cm²/Å), apply Vega→AB offsets, outlier-clip, plot SEDs
-3. `notebooks/03_unreddened_template.ipynb` — Load `templates/qso_template.txt`, redshift to each QSO's z, compute synthetic photometry via `synphot`
-4. `notebooks/04_color_color.ipynb` — NUV/G vs G/R color-color plot; UV-excess selection criterion: FUV > NUV AND (NUV/G upturn OR FUV/NUV upturn) AND E(B-V) > 0.1
+1. `notebooks/01_crossmatch.ipynb` — CDS XMatch (via `astroquery.xmatch`) to GALEX/PS1/UKIDSS/AllWISE/2MASS for DESI, W2M-current, and W2M-legacy; combines DESI+W2M and generates UV-excess candidate CSVs (canonical selection step — see `04_color_color.ipynb` note)
+2. `notebooks/02_build_seds.ipynb` — Convert AB mags to F_λ (erg/s/cm²/Å), apply Vega→AB offsets, outlier-clip, plot SEDs per catalog variant, including candidate SEDs with template overlay
+3. `notebooks/03_unreddened_template.ipynb` — Load `templates/qso_template.txt`, redshift to each QSO's z, compute synthetic photometry via `synphot`, overlay on observed SEDs (template scaling only — E(B-V) fitting via `quasar_unred.find_ebv` is not yet wired in; see the notebook's "Next step" section)
+4. `notebooks/04_color_color.ipynb` — Visualizes the UV-excess candidates selected in notebook 01; NUV/G vs G/R color-color plots. UV-excess selection criterion (applied in notebook 01): FUV > NUV AND (NUV/G upturn OR FUV/NUV upturn) AND E(B-V) > 0.2
+5. `notebooks/05_histograms.ipynb` — Crossmatch quality histograms (real vs. false-match separation) and E(B-V) distribution / UV-excess fraction charts
 
 ## Parameters — Single Source of Truth
 
@@ -71,12 +72,15 @@ Key values:
 
 ## Known Issues — Always Check Before Acting
 
-- [ ] Always verify `SPECTYPE == QSO` before analysis — do not match to stars or galaxies
+- [x] Issue logged 2026-07-07, fixed 2026-07-07: `01_crossmatch.ipynb` now filters `SPECTYPE == 'QSO'` on the DESI base catalog before matching (the original `desi_crossmatch_multi.py` script did not)
 - [ ] Convert all bands to AB before flux conversion — WISE and UKIDSS require Vega→AB offsets (see config)
 - [ ] UV-excess candidate sample target is <100 — flag and investigate if it grows larger
 - [ ] Crossmatch radius (2 arcsec) not yet optimized across catalogs
 - [ ] Primary working matched CSV not yet determined — run `/validate-crossmatch` on the four variants in `data/matched/` to compare band coverage
 - [ ] GitHub remote not yet initialized — `/push-to-github` and `/sync-from-github` will not work until `git remote` is set up
+- [ ] Issue logged 2026-07-07: no script/notebook actually fits E(B-V) via `quasar_unred.find_ebv` — all "unred" scripts and `03_unreddened_template.ipynb` only do template overlay + median-flux scaling for visual comparison. The patchy-obscuration model equation above is a stated goal, not yet implemented.
+- [ ] Issue logged 2026-07-07: `scripts/seds/COMBINED_SEDs_unred.py` references `data/matched/COMBINED_matched.csv` (does not exist) and `Jmag_2mass`/`Hmag_2mass`/`Kmag_2mass` columns (not present in any current matched CSV) — appears broken/aspirational, not ported to notebooks
+- [x] Issue logged 2026-07-07, fixed 2026-07-07: CLAUDE.md previously stated the UV-excess E(B-V) threshold as >0.1; the actual scripts and `config/qso_params.yaml`'s `uv_excess.ebv_min` use >0.2 — corrected above to match config (the single source of truth)
 
 ## Slash Commands
 
