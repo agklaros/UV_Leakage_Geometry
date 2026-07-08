@@ -512,3 +512,40 @@
 
 **What's being worked on next:**
 - No specific task in flight — awaiting user direction. Given the notebook migration, a reasonable next step would be to actually run notebooks 01–05 in order and verify they reproduce the same DESI/W2M counts and UV-excess candidate numbers as the old scripts, then confirm the older open items (g-r/r-i criterion decision, crossmatch radius optimization, `/validate-crossmatch` on the four legacy matched CSVs) are still accurately tracked against the new notebook-based pipeline rather than the retired scripts.
+
+---
+
+## Session — 2026-07-08
+
+**What we did:**
+- Created `scripts/matching/build_control_sample_w2m.py`, a new reference script (not wired into the notebook pipeline, per existing `scripts/` convention) that builds a candidate + matched-control sample CSV:
+  - Loads `data/matched/uv_excess_candidates_w2m.csv` (34 rows) and `data/matched/FINAL_COMBINED_QSOs_W2M.csv` (5,489 rows), coalescing `Z`/`zsp` and `EBV`/`ebv` per row since DESI vs. W2M rows populate different columns
+  - Filters candidates to redshift > 0.1 (all 34 existing candidates already pass this; min z = 0.22, so no candidates were dropped)
+  - For each surviving candidate, selects control QSOs from the full combined catalog that share the candidate's E(B-V) histogram bin (bin width confirmed as 0.1 in `05_histograms.ipynb`, not 0.05) and fall within a redshift tolerance `DZ_TOL`
+  - Determined `DZ_TOL = 0.016` by scanning tolerances 0.001–0.05 against the full catalog and picking the value giving ~1 control match per candidate on average (0.62 at Δz=0.01, **0.97 at Δz=0.016**, 1.29 at Δz=0.02); documented in the script's docstring/comments so it's easy to retune later
+  - Adds a `UV_EXCESS` column (`YES` for candidates, `NO` for controls), concatenates, and drops exact-duplicate rows
+- Ran the script: writes `data/matched/uv_excess_with_controls_w2m.csv` — 56 rows (34 YES + 22 unique NO controls), zero duplicate rows. Note: 33 of the 34 candidate-control pairings resolved, but several candidates share the same nearby control (E(B-V), z) cell, so unique controls (22) are fewer than pairings (33); 17 of the 34 candidates found no control at all within this radius, mostly at the high-E(B-V) end where the full catalog is sparse.
+
+**Decisions made:**
+- E(B-V) bin membership uses `floor(E(B-V) / 0.1)` to match the existing histogram convention in `05_histograms.ipynb`, rather than introducing a new/different binning scheme
+- Redshift radius fixed at a single global constant (0.016) rather than per-candidate adaptive radii, for simplicity — acceptable given the "about 1 pair per candidate" framing in the request
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Everything from 2026-07-07 | Unchanged (notebooks 01–05 are the primary pipeline; `scripts/` reference-only) |
+| `build_control_sample_w2m.py` | New reference script in `scripts/matching/`; runs cleanly; not wired into any notebook |
+| `uv_excess_with_controls_w2m.csv` | New output in `data/matched/`; 56 rows, candidate vs. control flagged via `UV_EXCESS` column |
+
+**Blockers / open questions:**
+- Coverage gap: 17 of 34 UV-excess candidates have no control match at Δz=0.016, concentrated at high E(B-V) where the combined catalog thins out — widening `DZ_TOL` would fix this at the cost of >1 match for well-populated candidates; no decision made on whether that tradeoff is acceptable for the intended downstream use (this was not specified by the user)
+- All older carried-over items remain open and untouched this session: g-r/r-i criterion permanence decision, crossmatch radius (2″) optimization, `/validate-crossmatch` on the four legacy matched CSVs, 52 SED PNGs still sitting in `~/Downloads/` unreviewed, `colorcolor_uv_excess_candidates_w2m.py` connector-line variant still not recreated
+- Notebooks 01–05 still not verified end-to-end against old script outputs (open since 2026-07-07)
+
+**Suggested next steps:**
+1. Decide whether the 17 candidates with no control match are acceptable as-is, or whether `DZ_TOL` should be widened (or made per-candidate/adaptive) to guarantee at least one control for every candidate
+2. Run notebooks 01–05 in order and verify they reproduce the same DESI/W2M counts and UV-excess candidate numbers as the retired scripts (carried over from 2026-07-07)
+3. Decide whether to keep the g-r/r-i UV-excess criterion branch permanently; document in `config/qso_params.yaml` and `CLAUDE.md` if kept (carried over from 2026-07-02)
+4. Review the 52 SED PNGs still sitting in `~/Downloads/` and move into `figures/` (carried over from 2026-07-03)
+5. Run `/validate-crossmatch` on the four legacy matched CSV variants to determine the primary sample (long-standing open item)
