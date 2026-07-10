@@ -32,11 +32,12 @@ from scipy.optimize import curve_fit
 #from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-file = str(BASE_DIR / "data/matched/uv_excess_candidates.csv")
+file = str(BASE_DIR / "data/matched/FINAL_COMBINED_QSOs_W2M.csv")
 table = Table.read(file)
 
 
 targetID = (table['TARGETID'])
+designation = np.array(table['designation'], dtype=str)
 ra = np.array(table['RA'])
 dec = np.array(table['DEC'])
 redshift = (table['Z'])
@@ -76,16 +77,21 @@ flam_y = (np.array(table['ymag'])*u.ABmag).to((su.FLAM), u.spectral_density(lam[
 flam_y[flam_y > (1e-11 * su.FLAM)] = np.nan
 
 
-FUVmags = np.array(table['FUVmag'])
-NUVmags = np.array(table['NUVmag'])
-gmags = np.array(table['gmag'])
-rmags = np.array(table['rmag'])
-imags = np.array(table['imag'])
-zmags = np.array(table['zmag'])
+# DESI rows populate gmag/rmag; W2M rows populate gmag_2/rmag_2 instead
+# (see build_control_sample_w2m.py's coalesce() for the same pattern)
+gmags = np.where(np.isnan(table['gmag']), table['gmag_2'], table['gmag'])
+rmags = np.where(np.isnan(table['rmag']), table['rmag_2'], table['rmag'])
+flam_g = (gmags*u.ABmag).to(su.FLAM, u.spectral_density(lam[2]))
+flam_g[flam_g > (1e-11 * su.FLAM)] = np.nan
+flam_r = (rmags*u.ABmag).to(su.FLAM, u.spectral_density(lam[3]))
+flam_r[flam_r > (1e-11 * su.FLAM)] = np.nan
 
-fuvnuv = FUVmags - NUVmags
-nuvg = NUVmags - gmags
-gr = gmags - rmags
+# Plot the same flux ratios used for UV-excess selection (see
+# uv_excess_mask() in candidates_to_csv_w2m.py): NUV/g > 1 & g/r < 1, OR
+# FUV/NUV > 1 & NUV/g < 1.
+f_fn = (flam_fuv / flam_nuv).value
+f_ng = (flam_nuv / flam_g).value
+f_gr = (flam_g / flam_r).value
 
 
 
@@ -93,24 +99,42 @@ gr = gmags - rmags
 #ebv[ebv < 0.2] = np.nan
 
 
+# Flag which QSOs are in the UV-excess candidate sample.
+# TARGETID == 0 is a placeholder for W2M-only rows with no DESI ID, so those
+# candidates must be matched via designation instead (see build_control_sample_w2m.py).
+candidates = Table.read(candidates_file := str(BASE_DIR / "data/matched/uv_excess_candidates_w2m.csv"))
+candidate_ids = np.array(candidates['TARGETID'])
+candidate_designations = np.array(candidates['designation'], dtype=str)
 
-plt.figure(figsize=(10, 10))
-sc = plt.scatter(nuvg, gr, c=redshift, cmap='inferno', s=100)
+matched_by_id = np.isin(targetID, candidate_ids[candidate_ids != 0]) & (np.array(targetID) != 0)
+matched_by_designation = np.isin(designation, candidate_designations[candidate_ids == 0]) & (designation != '0')
+is_candidate = matched_by_id | matched_by_designation
+colors = np.where(is_candidate, 'blue', 'red')
 
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+
+sc1 = ax1.scatter(f_gr, f_ng, c=colors, s=100)
+ax1.axhline(y=1)
+ax1.axvline(x=1)
+ax1.set_xlabel('g/r flux ratio (<1)')
+ax1.set_ylabel('NUV/g flux ratio (>1)')
+ax1.set_title('Color vs Color for Final Combined Sample (5490 QSOs)')
+
+sc2 = ax2.scatter(f_ng, f_fn, c=colors, s=100)
+ax2.axhline(y=1)
+ax2.axvline(x=1)
+ax2.set_xlabel('NUV/g flux ratio (<1)')
+ax2.set_ylabel('FUV/NUV flux ratio (>1)')
+ax2.set_title('FUV Upturn Branch')
 
 #Cursor to show each DESI TARGETID
-# cursor = mplcursors.cursor(sc, hover=True)
+# cursor = mplcursors.cursor(sc1, hover=True)
 # @cursor.connect("add")
 # def on_add(sel):
 #     idx = sel.index
 #     sel.annotation.set_text(f"RA: {ra[idx]}")
 
-plt.title('Color vs Color for 24 QSOs with UV Excess')
-plt.colorbar(label='E(B-V)')
-plt.axhline(y=0)
-plt.axvline(x=0)
-plt.xlabel('G-R <0')
-plt.ylabel('NUV-G >0')
 plt.show()
     
 
