@@ -20,7 +20,7 @@ from synphot.observation import Observation
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-file = str(BASE_DIR / "data/matched/uv_excess_candidates_w2m_gri.csv")
+file = str(BASE_DIR / "data/matched/uv_excess_candidates_w2m.csv")
 filtdir = str(BASE_DIR / "data/filters/")
 templateQSO = str(BASE_DIR / "templates/qso_template.txt")
 outdir = str(Path.home() / "Downloads/")
@@ -86,18 +86,32 @@ lam_template = [lam_fuv, lam_nuv, lam_g, lam_r, lam_i, lam_z, lam_y,
                 lam_J_2m, lam_H_2m, lam_K_2m,
                 lam_W1, lam_W2, lam_W3, lam_W4]
 
+# Common axis bounds (shared across all SEDs so plots are directly comparable).
+XLIM = (5e2, 3e5)
+YLIM = (5e-19, 3e-16)
+
 flam_fuv = (mag_arr(table['FUVmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_fuv))
 flam_fuv[flam_fuv > (1e-11 * su.FLAM)] = np.nan
 flam_nuv = (mag_arr(table['NUVmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_nuv))
 flam_nuv[flam_nuv > (1e-11 * su.FLAM)] = np.nan
 
-flam_g = (mag_arr(table['gmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_g))
+# DESI rows populate gmag/rmag/imag/zmag; W2M rows populate gmag_2/rmag_2/imag_2/zmag_2 instead.
+gmag = mag_arr(table['gmag'])
+gmag = np.where(np.isfinite(gmag), gmag, mag_arr(table['gmag_2']))
+rmag = mag_arr(table['rmag'])
+rmag = np.where(np.isfinite(rmag), rmag, mag_arr(table['rmag_2']))
+imag = mag_arr(table['imag'])
+imag = np.where(np.isfinite(imag), imag, mag_arr(table['imag_2']))
+zmag = mag_arr(table['zmag'])
+zmag = np.where(np.isfinite(zmag), zmag, mag_arr(table['zmag_2']))
+
+flam_g = (gmag * u.ABmag).to(su.FLAM, u.spectral_density(lam_g))
 flam_g[flam_g > (1e-11 * su.FLAM)] = np.nan
-flam_r = (mag_arr(table['rmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_r))
+flam_r = (rmag * u.ABmag).to(su.FLAM, u.spectral_density(lam_r))
 flam_r[flam_r > (1e-11 * su.FLAM)] = np.nan
-flam_i = (mag_arr(table['imag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_i))
+flam_i = (imag * u.ABmag).to(su.FLAM, u.spectral_density(lam_i))
 flam_i[flam_i > (1e-11 * su.FLAM)] = np.nan
-flam_z = (mag_arr(table['zmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_z))
+flam_z = (zmag * u.ABmag).to(su.FLAM, u.spectral_density(lam_z))
 flam_z[flam_z > (1e-11 * su.FLAM)] = np.nan
 flam_y = (mag_arr(table['ymag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_y))
 flam_y[flam_y > (1e-11 * su.FLAM)] = np.nan
@@ -153,7 +167,7 @@ def plot_sed(index, name, ra, dec, zsp):
                         lookup_table=templateFlux * su.FLAM, z=zsp)
     synth_flx = []
     for ff in filt_files:
-        bp = SpectralElement.from_file(filtdir + ff)
+        bp = SpectralElement.from_file(str(Path(filtdir) / ff))
         try:
             obs = Observation(sp, bp, force='extrap')
             synth_flx.append(obs.effstim('flam').value)
@@ -185,12 +199,13 @@ def plot_sed(index, name, ra, dec, zsp):
     
     plt.loglog()
     plt.title(f'RA = {ra:.4f}   DEC = {dec:.4f}')
-    plt.ylim(1e-18, 2e-16)
+    plt.xlim(*XLIM)
+    plt.ylim(*YLIM)
     plt.legend(fontsize=8)
     plt.tight_layout()
 
     safe_name = "".join(c if (c.isalnum() or c in "._-") else "_" for c in str(name))
-    plt.savefig(f"{outdir}SED_{safe_name}.png", dpi=150)
+    plt.savefig(str(Path(outdir) / f"SED_{safe_name}.png"), dpi=150)
     plt.close()
 
 
