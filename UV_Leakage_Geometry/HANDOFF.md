@@ -549,3 +549,37 @@
 3. Decide whether to keep the g-r/r-i UV-excess criterion branch permanently; document in `config/qso_params.yaml` and `CLAUDE.md` if kept (carried over from 2026-07-02)
 4. Review the 52 SED PNGs still sitting in `~/Downloads/` and move into `figures/` (carried over from 2026-07-03)
 5. Run `/validate-crossmatch` on the four legacy matched CSV variants to determine the primary sample (long-standing open item)
+
+---
+
+## Session — 2026-07-10
+
+**What we did:**
+- Debugged and fixed `scripts/colorcolor/colorcolor.py` (`FINAL_COMBINED_QSOs_W2M.csv`, 5,489 rows), which was flagging the wrong points as UV-excess candidates and plotting them in an uninterpretable way:
+  - **False-positive matches**: `TARGETID == 0` is a placeholder for W2M-only rows with no DESI ID; naively matching on `TARGETID` caused all 38 zero-ID rows in the main table to falsely match all 16 zero-ID candidates in `uv_excess_candidates_w2m.csv`. Fixed by excluding `TARGETID == 0` from ID-based matching and instead matching those rows via the `designation` column (same pattern already used in `build_control_sample_w2m.py`)
+  - **Missing photometry for W2M rows**: the script read `gmag`/`rmag` directly, but those columns are only populated for DESI-sourced rows — W2M-sourced rows carry their g/r photometry in `gmag_2`/`rmag_2` instead. Fixed by coalescing `gmag`/`gmag_2` and `rmag`/`rmag_2` per row. Together with the matching fix above, this brought correctly-flagged candidates from 18 up to the full 34
+  - **Axes didn't match the selection criterion**: the plot originally used magnitude differences (`NUVmag - gmag`, `gmag - rmag`), but `uv_excess_mask()` in `candidates_to_csv_w2m.py` selects on **flux ratios** (`flam_nuv/flam_g > 1`, `flam_g/flam_r < 1`, or `flam_fuv/flam_nuv > 1` with `flam_nuv/flam_g < 1`). Verified by hand (e.g. `gmag=20, rmag=19` → `flam_g/flam_r = 0.655`) that flux ratios and magnitude differences don't have the sign relationship one might naively expect, given the large `1/λ²` factor between GALEX and PanSTARRS pivot wavelengths. Rewrote the script to compute and plot the actual flux ratios (`f_ng`, `f_gr`, `f_fn`) instead, with reference lines at 1 (not 0) marking the true decision boundary
+  - Restructured the single plot into a 1×2 side-by-side figure: left panel is `g/r` (x) vs `NUV/g` (y) for the primary UV-upturn branch, right panel is `NUV/g` (x) vs `FUV/NUV` (y) for the FUV-upturn branch
+- Investigated why many red (non-candidate) points still land in the "correct" quadrant of each panel: confirmed quantitatively that 252 of 5,489 rows satisfy the raw flux-ratio criterion with no E(B-V) cut, but only 34 also pass the full `uv_excess_mask()` (which additionally requires `EBV > 0.2` for DESI-sourced rows; W2M-sourced rows skip the EBV cut per existing script comments, since W2M's E(B-V) values run much lower). E(B-V) isn't one of the plotted axes, so this is expected/correct behavior, not a bug — the extra red points are blue-SED-shaped QSOs that simply aren't dust-reddened enough to count as UV-*leakage* candidates
+- Also moved `scripts/histogram.py` → `scripts/matching/histogram.py` and `scripts/histogram2.py` → `scripts/matching/histogram2.py` (pure renames, no content changes; already staged in the working tree at session start, committed alongside the colorcolor.py fix)
+- Committed as `943e73a` and pushed to `origin/main`
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Everything from 2026-07-08 | Unchanged (notebooks 01–05 are the primary pipeline; `scripts/` reference-only; `uv_excess_with_controls_w2m.csv` still has 17/34 candidates without a control match) |
+| `scripts/colorcolor/colorcolor.py` | Fixed this session — correctly flags all 34 candidates in blue, plots the actual flux-ratio selection criterion as a 2-panel figure; still reference-only, not wired into a notebook |
+| `scripts/matching/histogram.py`, `histogram2.py` | Relocated from `scripts/` (no content change) |
+
+**Blockers / open questions:**
+- `colorcolor.py` currently only visualizes E(B-V) implicitly (not plotted) — a viewer can't tell from the plot alone why a red point in the "candidate" quadrant wasn't flagged; no decision made on whether to add an E(B-V) indicator (e.g. point size or a third color tier) to make this legible in the figure itself
+- `04_color_color.ipynb` (the notebook counterpart of this script) was not touched this session — unclear whether it has the same TARGETID/photometry-column bugs that were just fixed in the reference script; should be checked before relying on it
+- All older carried-over items remain open and untouched this session: 17/34 control-match coverage gap (`DZ_TOL` tuning), g-r/r-i criterion permanence decision, crossmatch radius (2″) optimization, `/validate-crossmatch` on the four legacy matched CSVs, 52 SED PNGs still sitting in `~/Downloads/` unreviewed, notebooks 01–05 still not verified end-to-end against retired script outputs (open since 2026-07-07)
+
+**Suggested next steps:**
+1. Check whether `04_color_color.ipynb` has the same TARGETID-matching and gmag/rmag-coalescing bugs just fixed in `scripts/colorcolor/colorcolor.py`, and port the fixes over if so
+2. Decide whether to add an E(B-V) visual indicator to `colorcolor.py`'s panels so viewers can distinguish "right SED shape, not reddened enough" from true candidates without cross-referencing separately
+3. Decide whether the 17 candidates with no control match are acceptable as-is, or whether `DZ_TOL` should be widened (carried over from 2026-07-08)
+4. Run notebooks 01–05 in order and verify they reproduce the same DESI/W2M counts and UV-excess candidate numbers as the retired scripts (carried over from 2026-07-07)
+5. Review the 52 SED PNGs still sitting in `~/Downloads/` and move into `figures/` (carried over from 2026-07-03)
