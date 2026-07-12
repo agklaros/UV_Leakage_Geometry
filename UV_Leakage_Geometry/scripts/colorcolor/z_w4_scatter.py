@@ -23,8 +23,13 @@ matched_by_designation = df["designation"].isin(cand.loc[cand["TARGETID"].isna()
 is_candidate = matched_by_id | matched_by_designation
 
 # DESI rows carry Z/W4mag, W2M rows carry zsp/w4mag — take whichever is set.
+# Both are AllWISE profile mags in Vega; convert to AB using the SVO FPS
+# WISE/WISE.W4 Vega zero point (8.363 Jy) against the AB zero point (3631 Jy).
+# Note config/qso_params.yaml lists 6.620 (WISE Explanatory Supplement) —
+# differs by 0.026 mag due to zero-point choice.
+W4_VEGA_TO_AB = 2.5 * np.log10(3631 / 8.363)  # ≈ 6.594
 z = df["Z"].where(df["Z"].notna(), df["zsp"])
-w4 = df["W4mag"].where(df["W4mag"].notna(), df["w4mag"])
+w4 = df["W4mag"].where(df["W4mag"].notna(), df["w4mag"]) + W4_VEGA_TO_AB
 
 mask = z.notna() & w4.notna() & (z > 0)
 
@@ -39,11 +44,9 @@ ax.scatter(z[mask & ~is_candidate], absW4[~is_candidate[mask]], s=8, alpha=0.4, 
 ax.scatter(z[mask & is_candidate], absW4[is_candidate[mask]], s=20, alpha=0.9, color="tab:red", label="UV-excess")
 
 ax.set_xlabel("Redshift (Z / zsp)", fontsize=12)
-ax.set_ylabel("Absolute W4 magnitude", fontsize=12)
+ax.set_ylabel("Absolute W4 magnitude (AB)", fontsize=12)
 ax.invert_yaxis()
 ax.set_title("Redshift vs. absolute WISE W4 magnitude — FINAL_COMBINED_QSOs_W2M")
 ax.grid(linestyle=":", alpha=0.5)
 ax.legend(loc="best")
-
-plt.tight_layout()
 plt.show()

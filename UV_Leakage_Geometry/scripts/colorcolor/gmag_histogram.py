@@ -36,18 +36,30 @@ abs_g = gmag[mask] - distmod
 
 bin_edges = np.arange(np.floor(abs_g.min()), np.ceil(abs_g.max()) + 0.25, 0.25)
 
+# Colors match ebv_uv_excess_histogram.py. The candidate sample is far
+# smaller than the full sample, so it gets its own count scale on the
+# right-hand axis to keep both distributions visible.
 fig, ax = plt.subplots(figsize=(8, 6))
-ax.hist(abs_g, bins=bin_edges, color="tab:blue", edgecolor="black", linewidth=0.5, label="All QSOs")
-# Overlay the UV-excess candidates in the same bins, drawn narrower so the
-# orange bars sit inside the blue ones.
-ax.hist(abs_g[is_candidate[mask]], bins=bin_edges, color="tab:orange",
-        edgecolor="black", linewidth=0.5, rwidth=0.5, label="UV-excess")
+ax_cand = ax.twinx()
+
+ax.hist(abs_g, bins=bin_edges, histtype="stepfilled",
+        color="steelblue", alpha=0.7, label="All QSOs")
+ax_cand.hist(abs_g[is_candidate[mask]], bins=bin_edges, histtype="stepfilled",
+             color="darkorange", alpha=0.9, label="UV-excess")
 
 ax.set_xlabel("Absolute g magnitude", fontsize=12)
-ax.set_ylabel("Number", fontsize=12)
+ax.set_ylabel("Number (all QSOs)", fontsize=12, color="steelblue")
+ax.tick_params(axis="y", labelcolor="steelblue")
+ax_cand.set_ylabel("Number (UV-excess)", fontsize=12, color="darkorange")
+ax_cand.tick_params(axis="y", labelcolor="darkorange")
+ax_cand.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
+
 ax.set_title(f"Absolute gmag distribution — FINAL_COMBINED_QSOs_W2M ({mask.sum()} QSOs)")
 ax.grid(linestyle=":", alpha=0.5)
-ax.legend(loc="best")
+# Merge the two axes' legend entries into one box
+handles1, labels1 = ax.get_legend_handles_labels()
+handles2, labels2 = ax_cand.get_legend_handles_labels()
+ax.legend(handles1 + handles2, labels1 + labels2, loc="best")
 
 plt.tight_layout()
 plt.show()

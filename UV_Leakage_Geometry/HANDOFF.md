@@ -583,3 +583,43 @@
 3. Decide whether the 17 candidates with no control match are acceptable as-is, or whether `DZ_TOL` should be widened (carried over from 2026-07-08)
 4. Run notebooks 01–05 in order and verify they reproduce the same DESI/W2M counts and UV-excess candidate numbers as the retired scripts (carried over from 2026-07-07)
 5. Review the 52 SED PNGs still sitting in `~/Downloads/` and move into `figures/` (carried over from 2026-07-03)
+
+---
+
+## Session — 2026-07-12
+
+**What we did:**
+- Synced from GitHub (`/sync-from-github`): committed the pending local cleanup of `scripts/colorcolor/colorcolor.py` (removed unused `mplcursors` import; `3453a96`), then merge-pulled incoming commit `67e37f9`, which added two new scripts from another machine: `scripts/colorcolor/gmag_histogram.py` (absolute-g histogram with UV-excess overlay) and `scripts/colorcolor/z_w4_scatter.py` (redshift vs. absolute W4 scatter)
+- Restyled `gmag_histogram.py` to match `ebv_uv_excess_histogram.py`'s look: `steelblue` (α 0.7) / `darkorange` (α 0.9) `stepfilled` histograms instead of `tab:blue`/`tab:orange` bars. Because the 34-candidate sample was invisible against ~5,400 QSOs, the UV-excess histogram now plots on its own right-hand y-axis via `twinx()` (left axis = all QSOs, right = candidates, axis labels/ticks colored to match, integer-only ticks on the candidate axis, merged legend). Verified headless: 5,481 QSOs plotted, candidates skew faint as expected
+- Audited all raw-mag → absolute-mag conversions (only `gmag_histogram.py` and `z_w4_scatter.py` do this) against SVO Filter Profile Service and traced column provenance through the crossmatch scripts:
+  - Distance modulus math (`5·log10(d_L/Mpc) + 25`, FlatLambdaCDM H0=70/Om0=0.3) correct in both files
+  - Column merges are system-consistent: `gmag`/`gmag_2` both PS1 (AB per SVO — no offset needed), `W4mag`/`w4mag` both AllWISE (Vega); the 38 W2M-column rows never overlap DESI columns, so the `.where()` coalescing is safe
+  - Found `z_w4_scatter.py` plotted absolute W4 in unlabeled **Vega**; user confirmed AB was intended. Applied the SVO-derived offset `2.5·log10(3631/8.363) ≈ +6.594` (computed from zero points in code, cited) and relabeled the axis "(AB)". Verified: absolute W4 now spans ≈ −26 to −33 AB
+  - No K-correction in either script — user confirmed this is deliberate for W4 (far-IR); remains a caveat for the observed-frame absolute-g histogram
+- Committed the sync/cleanup as `3453a96` + merge `618a1bf` mid-session; the histogram/scatter edits are committed as part of this session's closing push
+
+**Decisions made:**
+- W4 Vega→AB uses the SVO FPS zero-point-derived value (+6.594) per explicit user instruction, not the config's `vega_to_ab_offsets: W4: 6.620` (WISE Explanatory Supplement). The 0.026 mag discrepancy is noted in a code comment; config not changed
+- No K-correction for W4 absolute mags (far-IR, negligible) — user decision, closed
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Everything from 2026-07-10 | Unchanged (notebooks 01–05 primary; `scripts/` reference-only) |
+| `scripts/colorcolor/gmag_histogram.py` | New (pulled) + restyled this session: dual-scale twinx layout, colors match E(B-V) histogram; verified headless |
+| `scripts/colorcolor/z_w4_scatter.py` | New (pulled) + fixed this session: W4 converted Vega→AB (+6.594, SVO-derived), axis labeled; verified headless |
+| `scripts/colorcolor/colorcolor.py` | Unused `mplcursors` import removed |
+
+**Blockers / open questions:**
+- Script vs. config W4 offset mismatch: `z_w4_scatter.py` uses SVO's 6.594, `config/qso_params.yaml` says 6.620 — decide which is canonical and align (0.026 mag, cosmetic for plots but config is the declared single source of truth)
+- Both new scripts' comments cite `absmag_vs_z.ipynb` as the method source, but no such notebook exists in the repo (presumably on the other machine) — either bring it in or drop the reference
+- Absolute-g histogram has no K-correction or Galactic extinction correction — fine for quick-look, but don't quote as rest-frame M_g; the catalog `EBV` column is QSO reddening, not Galactic, so it can't be reused for that
+- All older carried-over items remain open: 17/34 control-match coverage gap, g-r/r-i criterion permanence, crossmatch radius optimization, `/validate-crossmatch` on legacy CSVs, 52 SED PNGs in `~/Downloads/`, notebooks 01–05 end-to-end verification, `04_color_color.ipynb` bug-parity check vs. fixed `colorcolor.py`
+
+**Suggested next steps:**
+1. Reconcile the W4 Vega→AB offset between `z_w4_scatter.py` (6.594, SVO) and `config/qso_params.yaml` (6.620, WISE supplement) — pick one and align both
+2. Locate or recreate `absmag_vs_z.ipynb` (referenced by both new scripts, missing from repo)
+3. Check whether `04_color_color.ipynb` has the TARGETID-matching and gmag/rmag-coalescing bugs fixed in `colorcolor.py` on 2026-07-10 (carried over)
+4. Run notebooks 01–05 end-to-end verification (carried over from 2026-07-07)
+5. Review the 52 SED PNGs in `~/Downloads/` (carried over from 2026-07-03)
