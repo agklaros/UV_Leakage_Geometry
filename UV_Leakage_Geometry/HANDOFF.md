@@ -666,3 +666,36 @@
 - Confirm with K. Leighly whether the 1/P exposure scaling or the stricter 1/P² (3σ via σ_P = √2/(S/N)) convention should be used for the proposal
 - Apply Galactic extinction correction to g mags before finalizing exposure times; vet the z < 0.5 (W2M) candidates before targeting
 - Fold `scripts/obs/` into a `notebooks/06_observing_plan.ipynb` per agreed deliverable plan; then draft observing proposal
+
+---
+
+## Session — 2026-07-13 (second session, final)
+
+*Supersedes the [CHECKPOINT] entry above from the same session — that entry was written pre-commit; everything it lists as "untracked/uncommitted" was committed as `8c52e29` and pushed to `origin/main`.*
+
+**What was accomplished:**
+- **Opened the observation-planning phase**: exposure times and S/N ratios for Lick Kast spectropolarimetry and imaging polarimetry of the 34 UV-excess candidates, following K. Leighly's methodology notes (`~/Downloads/Notes-1.pdf`; CCD equation and exposure-time solve per Chromey "To Measure the Sky" §9.5.4, eqs. 9.74–9.78, photographed in `~/Downloads/IMG_290{5-8}.JPG`)
+- Discovered the Kast web ETC (`etc.ucolick.org/web_s2n/kast`) backend is a plain POST/GET API returning JSON/CSV — the whole per-target workflow is scriptable; also built the manual path (user-driven ETC runs) first at user request, then automated it. Both paths coexist: `fetch_etc_downloads.py` never overwrites manually saved files
+- New `scripts/obs/` (5 scripts): `kast_etc.py` (CCD math + ETC CSV parser + synphot PS1-g integration), `make_etc_inputs.py`, `fetch_etc_downloads.py`, `process_etc_outputs.py`, `make_obs_plan_pdf.py`
+- New `observing:` config section (ETC settings, +0.752 mag pol-optics penalty, pol fractions 1%/4%, `target_snr: 10` / `snr_floor: 5` per advisor)
+- Validation: CCD math reproduces the ETC's own per-pixel S/N to ~1%; exposure-time inversion round-trips exactly
+- **Decisions made:** S/N targets 10 (ideal) / 5 (floor); g band (bluest full-coverage) as ETC normalization and imaging filter; 900 s reference ETC exposure; deliverable = scripts first, notebook 06 later
+- Committed `8c52e29` and pushed (45 files: scripts, 34 ETC tables in `data/etc_downloads/`, plan CSVs in `data/processed/`, PDF + PNG figures, config, HANDOFF checkpoint)
+
+**Pipeline / data state:**
+- Notebooks 01–05 unchanged. New obs-planning chain runs end-to-end: `make_etc_inputs.py` → (`fetch_etc_downloads.py` or manual ETC) → `process_etc_outputs.py` → `make_obs_plan_pdf.py`
+- Products: `data/processed/kast_etc_inputs.csv`, `data/processed/kast_obs_plan.csv` (per-target times at S/N 10 and 5, base and ×1/P), `figures/kast_obs_plan.pdf` (3-page report), `figures/kast_exptime_vs_gmag.png`
+- **Key result** (S/N=10, imaging pol, PS1 g): P=4% → 5 targets ≤1 h, 15 ≤2 h, 24 ≤4 h; P=1% → only 5 ≤4 h. Spectropolarimetry: 2 brightest ≤1 h unscaled, none ≤4 h after 1/P → protocol: imaging-pol survey, spectropol follow-up of bright detections
+
+**Blockers / open questions:**
+- 1/P vs 1/P² exposure-scaling convention (notes use rough 1/P; a 3σ detection via σ_P = √2/(S/N) scales as 1/P²) — ask K. Leighly before proposal numbers are quoted
+- g mags are observed-frame, not Galactic-extinction-corrected; candidate `EBV` is QSO-intrinsic and cannot be reused for that
+- Several candidates at z < 0.5 (W2M rows, outside nominal Fawcett range) — vet before including in the target list
+- All carried-over items from 2026-07-12 remain (W4 offset config reconciliation, missing `absmag_vs_z.ipynb`, `04_color_color.ipynb` bug-parity, notebooks 01–05 end-to-end verification, SED PNG review)
+
+**Suggested next steps:**
+1. Email K. Leighly re: 1/P vs 1/P² convention and the imaging-first protocol
+2. Add Galactic E(B-V) (e.g. SFD dust map at each RA/Dec) to the g mags and regenerate the plan
+3. Vet/flag the z < 0.5 candidates in the observing table
+4. Build `notebooks/06_observing_plan.ipynb` wrapping `scripts/obs/`
+5. Draft the Lick proposal around the imaging-polarimetry survey numbers in `kast_obs_plan.pdf`
