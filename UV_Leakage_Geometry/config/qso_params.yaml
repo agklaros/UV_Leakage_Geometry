@@ -50,3 +50,30 @@ uv_excess:
   ebv_min: 0.2                 # minimum E(B-V) to consider a QSO genuinely reddened
   target_sample_max: 100       # flag if clean UV-excess sample exceeds this
 
+observing:                     # Lick Kast polarimetry planning (methodology: K. Leighly notes, 2026-07)
+  # Workflow is MANUAL by design: the observer runs each target through the
+  # web ETC (etc_page) by hand and saves the CSV download; scripts only
+  # prepare the input sheet and post-process the downloaded files.
+  etc_page: "https://etc.ucolick.org/web_s2n/kast"
+  etc_settings:                # form settings — "leave all the defaults as is" per notes
+    dichroic: "d55"
+    slitwidth: "2.0 arcsec"
+    binning: "1x1 pixels"
+    grism: "600/4310"          # blue side
+    grating: "600/7500"        # red side
+    seeing: 1.5                # arcsec
+    airmass: 1.1
+    template: "flat"
+    norm_filter: "g"           # normalize input mag in g (bluest optical band with full coverage)
+    mag_system: "AB"
+  etc_exptime_s: 900.0         # exposure time to TYPE into the ETC for every target (notes: >=100 s;
+                               # exact value is arbitrary — results are rescaled analytically)
+  etc_downloads_dir: "data/etc_downloads"  # save each target's ETC CSV here, named per the input sheet
+  pol_flux_offset_mag: 0.752   # polarization optics pass half the flux: m_pol = m + 2.5*log10(2)
+  pol_fractions: [0.01, 0.04]  # polarization fractions to be sensitive to; t_pol = t_normal / P
+  target_snr: 10.0             # required S/N before pol scaling — advisor: definitely >5, ideally >10
+  snr_floor: 5.0               # hard minimum; exposure times reported at both values
+  imaging_filter: "data/filters/PAN-STARRS_PS1.g.dat"  # filter profile integrated for imaging polarimetry
+  spectropol_window_AA: [4000.0, 5500.0]  # window where per-pixel S/N requirement is evaluated (median)
+  max_single_exptime_s: 1800.0 # split total integration into exposures no longer than this
+

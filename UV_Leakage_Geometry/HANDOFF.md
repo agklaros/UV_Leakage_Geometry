@@ -623,3 +623,46 @@
 3. Check whether `04_color_color.ipynb` has the TARGETID-matching and gmag/rmag-coalescing bugs fixed in `colorcolor.py` on 2026-07-10 (carried over)
 4. Run notebooks 01–05 end-to-end verification (carried over from 2026-07-07)
 5. Review the 52 SED PNGs in `~/Downloads/` (carried over from 2026-07-03)
+
+---
+
+## Session — 2026-07-13 [CHECKPOINT]
+
+**What's been done so far:**
+- Pulled from `origin/main` (fast-forward `67e37f9` → `d762924`): brought in the restyled `gmag_histogram.py`, the W4 Vega→AB fix in `z_w4_scatter.py`, the `mplcursors` cleanup in `colorcolor.py`, and the `candidates_to_csv.py` move to `scripts/matching/` from the 2026-07-12 session
+- `scripts/colorcolor/z_w4_scatter.py`: y-axis label now states units explicitly ("Absolute W4 magnitude $M_{W4}$ [AB mag]"); added marginal histograms — a right panel (absolute W4, bins up the shared y-axis) and a top panel (redshift, bins along the shared x-axis), each showing all sources (tab:blue) vs. UV-excess (tab:red) with shared bin edges and log-scaled counts so the ~34-candidate sample stays visible next to ~5,400 QSOs. Layout is a 2×2 gridspec corner plot with the top-right cell hidden. Verified headless.
+- `scripts/colorcolor/gmag_histogram.py`: switched from absolute to **apparent** g magnitudes per user request — removed the FlatLambdaCDM/distance-modulus code and astropy imports entirely; labels/title now say "Apparent". Side effect: the mask no longer requires a valid redshift, so plotted sample grew slightly to 5,481 QSOs. Dual-axis (twinx) layout unchanged. Verified headless.
+- Committed both script changes as `d4d53c8` and pushed to `origin/main`
+
+**Current working state:**
+- Working tree clean except untracked `figures/z_vs_w4_scatter.png`, which is **stale** (predates the AB conversion and the marginal histograms) — regenerate from the updated script before committing, or delete
+- Preview render of the corner plot revealed a cluster of sources (including several UV-excess candidates) at z < 0.5, below the nominal Fawcett 0.5 < z < 2.5 range — presumably W2M rows; worth keeping in mind when interpreting the candidate redshift distribution
+- CLAUDE.md known-issues still lists "GitHub remote not yet initialized" — the remote exists and works; entry should be checked off
+
+**What's being worked on next:**
+- No task in flight — awaiting user direction. Carried-over items unchanged from 2026-07-12 (W4 offset config reconciliation, missing `absmag_vs_z.ipynb`, `04_color_color.ipynb` bug-parity check, notebooks 01–05 verification, SED PNG review)
+
+---
+
+## Session — 2026-07-13 (second session) [CHECKPOINT]
+
+**What's been done so far:**
+- **New project phase: Lick Kast polarimetry observation planning** (exposure times + S/N for spectropolarimetry and imaging polarimetry of the 34 UV-excess candidates), per methodology from K. Leighly's notes (`~/Downloads/Notes-1.pdf`) and Chromey "To Measure the Sky" §9.5.4 (CCD equation, eqs. 9.74–9.78)
+- Added `observing:` section to `config/qso_params.yaml`: ETC settings (d55, 2.0″ slit, 1×1, 600/4310 + 600/7500, seeing 1.5″, airmass 1.1, flat template, g-band AB), reference exptime 900 s, +0.752 mag polarization-optics penalty, pol fractions [1%, 4%], `target_snr: 10` / `snr_floor: 5` (advisor: "definitely >5, ideally >10")
+- New `scripts/obs/` module:
+  - `kast_etc.py` — CCD-equation S/N math (exposure solve ≡ Chromey 9.77), ETC CSV parser, synphot filter integration over PS1 g
+  - `make_etc_inputs.py` — per-target ETC input sheet → `data/processed/kast_etc_inputs.csv` (mag_to_enter = g + 0.752)
+  - `fetch_etc_downloads.py` — fetches each target's ETC "csv table for exposure" (`tab_s2n` endpoint, `verify=False` — host CA can't validate etc.ucolick.org chain) into `data/etc_downloads/`; never overwrites, so manual downloads coexist
+  - `process_etc_outputs.py` — ingests downloads → `data/processed/kast_obs_plan.csv` + `figures/kast_exptime_vs_gmag.png`
+  - `make_obs_plan_pdf.py` — 3-page report → `figures/kast_obs_plan.pdf` (methodology, exptime-vs-gmag figure, per-target table at S/N=10)
+- Validation: CCD math reproduces ETC's own per-pixel S/N to ~1%; exposure-time inversion round-trips exactly
+- Key result (S/N=10, imaging pol in g): P=4% → 5 targets ≤1 h, 15 ≤2 h, 24 ≤4 h; P=1% → only 5 ≤4 h. Spectropol infeasible after 1/P scaling (protocol: imaging survey first, spectropol follow-up of bright detections)
+
+**Current working state:**
+- All new files untracked/uncommitted: `scripts/obs/` (5 scripts), `data/etc_downloads/` (34 ETC tables), `data/processed/` (inputs + plan CSVs), `figures/kast_obs_plan.pdf`, `figures/kast_exptime_vs_gmag.png`; `config/qso_params.yaml` modified
+- Workflow supports both manual ETC runs (instructions printed by `make_etc_inputs.py`) and automated fetching
+
+**What's being worked on next:**
+- Confirm with K. Leighly whether the 1/P exposure scaling or the stricter 1/P² (3σ via σ_P = √2/(S/N)) convention should be used for the proposal
+- Apply Galactic extinction correction to g mags before finalizing exposure times; vet the z < 0.5 (W2M) candidates before targeting
+- Fold `scripts/obs/` into a `notebooks/06_observing_plan.ipynb` per agreed deliverable plan; then draft observing proposal
