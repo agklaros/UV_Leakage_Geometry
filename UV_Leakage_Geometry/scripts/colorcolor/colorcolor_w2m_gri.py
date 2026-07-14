@@ -17,8 +17,7 @@ from astropy.convolution import convolve, Box1DKernel
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 
-#for cursors
-import mplcursors
+
 
 import synphot
 from synphot import SourceSpectrum
