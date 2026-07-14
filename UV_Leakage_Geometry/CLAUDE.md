@@ -53,13 +53,14 @@ the UV leakage fraction as a function of E(B-V). A follow-up polarimetry campaig
 - `data/matched/` — Current canonical crossmatched outputs
 - `data/archive/` — Old iterations; kept for reference, not canonical
 - `data/processed/` — SED outputs and UV-excess candidate lists (future)
-- `scripts/` — Reference .py scripts; notebooks are the primary working environment
+- `scripts/` — Primary working code; changes and updates are normally made here. Takes precedence over the notebooks.
 - `filters/` — Filter transmission curves (.dat) from SVO Filter Profile Service
 - `templates/` — Intrinsic QSO spectral template (qso_template.txt)
 - `figures/` — Output plots
 
 ## Conventions
 
+- Scripts in `scripts/` are more important than the notebooks: develop and update in the scripts; notebooks hold fully completed code only (policy set 2026-07-12)
 - Notebooks are numbered and must be run in order
 - Raw data in data/raw/ is immutable — never overwrite or modify
 - data/archive/ files are kept for reproducibility but not used in current analysis

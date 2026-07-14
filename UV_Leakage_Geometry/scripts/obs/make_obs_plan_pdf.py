@@ -65,13 +65,13 @@ Methodology (K. Leighly notes 2026-07; Chromey, "To Measure the Sky", sec. 9.5.4
       CCD equation (Chromey eq. 9.77). Required S/N = {obs['target_snr']:g} (advisor: "ideally
       >10"); the {obs['snr_floor']:g} floor ("definitely >5") is tabulated in kast_obs_plan.csv.
   5.  Polarimetry penalty: to be sensitive to polarization fraction P, the normal
-      exposure time is multiplied by 1/P (rough rule per notes) — x25 for P = 4%,
+      exposure time is multiplied by 1/P (rough rule per notes) — x10 for P = 10%,
       x100 for P = 1%. Note P is NOT the scattered fraction: scattering with
       unfavorable geometry can cancel to zero net polarization.
 
 Sample summary at S/N = {snr:g}, imaging polarimetry (PS1 g)
 
-      P = 4%:  {within('t_img_snr10_p4_s', 1)} targets within 1 h,  {within('t_img_snr10_p4_s', 2)} within 2 h,  {within('t_img_snr10_p4_s', 4)} within 4 h
+      P = 10%: {within('t_img_snr10_p10_s', 1)} targets within 1 h,  {within('t_img_snr10_p10_s', 2)} within 2 h,  {within('t_img_snr10_p10_s', 4)} within 4 h
       P = 1%:  {within('t_img_snr10_p1_s', 2)} targets within 2 h,  {within('t_img_snr10_p1_s', 4)} within 4 h,  {within('t_img_snr10_p1_s', 8)} within 8 h
 
 Spectropolarimetry at S/N = {snr:g}/pixel is feasible unscaled for the brightest
@@ -95,8 +95,8 @@ def figure_page(pdf, df, obs):
     fig.subplots_adjust(top=0.7, bottom=0.32)
     ax.scatter(ok["gmag_AB"], ok["t_img_snr10_s"], color="darkorange",
                label=f"Imaging pol. base (PS1 g, S/N={snr:g})")
-    ax.scatter(ok["gmag_AB"], ok["t_img_snr10_p4_s"], color="darkorange",
-               marker="^", label="Imaging pol., P=4% (x25)")
+    ax.scatter(ok["gmag_AB"], ok["t_img_snr10_p10_s"], color="darkorange",
+               marker="^", label="Imaging pol., P=10% (x10)")
     ax.scatter(ok["gmag_AB"], ok["t_spec_snr10_s"], color="steelblue",
                label=f"Spectropol. base (S/N={snr:g}/pix)")
     for hours, txt in [(1, "1 h"), (4, "4 h")]:
@@ -117,13 +117,13 @@ def table_page(pdf, df, obs):
     snr = obs["target_snr"]
     ok = df.dropna(subset=["t_img_snr10_s"]).sort_values("gmag_AB")
     cols = ["Target", "g (AB)", "ETC mag",
-            "Img base", "Img P=4%", "Img P=1%", "N exp (4%)",
-            "Spec base", "Spec P=4%"]
+            "Img base", "Img P=10%", "Img P=1%", "N exp (10%)",
+            "Spec base", "Spec P=10%"]
     cells = [[
         r["target"], f"{r['gmag_AB']:.2f}", f"{r['mag_to_enter']:.2f}",
-        fmt_time(r["t_img_snr10_s"]), fmt_time(r["t_img_snr10_p4_s"]),
-        fmt_time(r["t_img_snr10_p1_s"]), f"{r['n_exp_img_snr10_p4']:.0f}",
-        fmt_time(r["t_spec_snr10_s"]), fmt_time(r["t_spec_snr10_p4_s"]),
+        fmt_time(r["t_img_snr10_s"]), fmt_time(r["t_img_snr10_p10_s"]),
+        fmt_time(r["t_img_snr10_p1_s"]), f"{r['n_exp_img_snr10_p10']:.0f}",
+        fmt_time(r["t_spec_snr10_s"]), fmt_time(r["t_spec_snr10_p10_s"]),
     ] for _, r in ok.iterrows()]
 
     fig, ax = plt.subplots(figsize=PAGE)

@@ -70,7 +70,8 @@ observing:                     # Lick Kast polarimetry planning (methodology: K.
                                # exact value is arbitrary — results are rescaled analytically)
   etc_downloads_dir: "data/etc_downloads"  # save each target's ETC CSV here, named per the input sheet
   pol_flux_offset_mag: 0.752   # polarization optics pass half the flux: m_pol = m + 2.5*log10(2)
-  pol_fractions: [0.01, 0.04]  # polarization fractions to be sensitive to; t_pol = t_normal / P
+  pol_fractions: [0.01, 0.10]  # polarization fractions to be sensitive to; t_pol = t_normal / P
+                                # (typical hoped-for range is 1-10%, not 1-4%)
   target_snr: 10.0             # required S/N before pol scaling — advisor: definitely >5, ideally >10
   snr_floor: 5.0               # hard minimum; exposure times reported at both values
   imaging_filter: "data/filters/PAN-STARRS_PS1.g.dat"  # filter profile integrated for imaging polarimetry

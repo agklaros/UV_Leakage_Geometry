@@ -20,7 +20,11 @@ Model: `F(λ)_obs = A·F(λ)_0 + (1-A)·F(λ)_0·e^(-τ(λ))` where τ(λ) = k(�
 
 ## Running the Project
 
-All primary work is in Jupyter notebooks, run in order from `UV_Leakage_Geometry/`:
+**Scripts in `scripts/` take precedence over the notebooks.** Scripts are the primary working code — this is where changes and updates should normally be made. Notebooks are reserved for fully completed code only: do not develop or iterate in a notebook; port code into a notebook only once it is finished and stable in the scripts. (Policy set 2026-07-12, reversing the earlier "notebooks primary / scripts reference-only" convention.)
+
+Script paths are derived from `Path(__file__).resolve().parents[N]`, so they are portable across machines/devices.
+
+The finalized notebook pipeline is run in order from `UV_Leakage_Geometry/`:
 
 ```bash
 cd UV_Leakage_Geometry
@@ -28,8 +32,6 @@ jupyter notebook   # or: jupyter lab
 ```
 
 Required packages: `astropy`, `astroquery`, `synphot`, `numpy`, `pandas`, `matplotlib`, `pyyaml`, `quasar_unred`.
-
-**Scripts in `scripts/` are reference implementations only.** Paths are now derived from `Path(__file__).resolve().parents[N]` (portable across machines/devices), but the scripts are still not wired into the pipeline and must not be run directly. Use the notebooks.
 
 ## Pipeline
 
@@ -43,7 +45,7 @@ Notebooks must be run in order:
 
 ## Parameters — Single Source of Truth
 
-All tunable parameters live in `config/qso_params.yaml`. Notebooks must load from it; do not hardcode values.
+All tunable parameters live in `config/qso_params.yaml`. Scripts and notebooks must load from it; do not hardcode values.
 
 Key values:
 - Matching radius: 2 arcsec (optimization pending)

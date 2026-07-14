@@ -1,6 +1,7 @@
 """S/N math and ETC-file parsing for Lick Kast polarimetry planning.
 
-Methodology (K. Leighly notes, 2026-07, and Chromey "To Measure the Sky"
+Methodology (K. Leighly notes + E. Glikman's synphot notebook, both in
+Downloads/Exposure Time Calc/, 2026-07, and Chromey "To Measure the Sky"
 sec. 9.5.4):
   - The observer runs each target through the Kast web ETC by hand
     (https://etc.ucolick.org/web_s2n/kast) with the settings in
@@ -10,9 +11,15 @@ sec. 9.5.4):
   - The downloaded CSV has columns wave,obj,sky,noise,s2n: per-pixel object
     counts, sky counts, read noise, and S/N versus wavelength [Angstroms]
     for the exposure time typed into the form.
-  - Spectropolarimetry uses the per-pixel S/N directly; imaging polarimetry
-    integrates the counts over a filter profile (synphot) and applies the
-    CCD equation  S/N = Nqso / sqrt(Nqso + Nsky + Noise).
+  - Spectropolarimetry uses the per-pixel values directly at the ETC's own
+    convention, S/N = Nqso / sqrt(Nqso + Nsky + Noise^2) (verified against
+    the ETC's own reported s2n column to ~2%).
+  - Imaging polarimetry instead runs obj/sky/noise through the filter
+    bandpass the way synphot's Observation.effstim() does for a PHOTLAM
+    source: a throughput-weighted *mean*, not a sum. The reference notebook
+    then applies the plain CCD equation S/N = Nqso / sqrt(Nqso+Nsky+Noise)
+    with the noise term unsquared, taken as-is from the reference code even
+    though it differs from the per-pixel convention above.
   - Counts scale linearly with exposure time while read noise does not, so
     one ETC run per target suffices; the time to reach a target S/N is the
     exact quadratic solution (equivalent to Chromey eq. 9.77).
@@ -67,16 +74,19 @@ def snr_at_time(obj_rate, sky_rate, rn, t):
     return signal / np.sqrt(signal + sky_rate * t + rn**2)
 
 
-def required_exptime(target_snr, obj_rate, sky_rate, rn_sq):
+def required_exptime(target_snr, obj_rate, sky_rate, noise_const):
     """Exposure time [s] at which the CCD-equation S/N reaches target_snr.
 
-    Solves S^2 (O t + K t + R^2) = (O t)^2 for t — the same quadratic as
-    Chromey eq. 9.77 with A = O^2/S^2, B = O + K, C = R^2.
+    Solves S^2 (O t + K t + C) = (O t)^2 for t — the same quadratic as
+    Chromey eq. 9.77 with A = O^2/S^2, B = O + K, C = noise_const. C is
+    R^2 for the per-pixel spectropol convention, or the unsquared
+    filter-weighted noise mean for the imaging convention — see module
+    docstring.
     """
     s2 = target_snr**2
     a = obj_rate**2
     b = -s2 * (obj_rate + sky_rate)
-    c = -s2 * rn_sq
+    c = -s2 * noise_const
     return (-b + np.sqrt(b**2 - 4.0 * a * c)) / (2.0 * a)
 
 
@@ -90,30 +100,37 @@ def load_filter(filter_path):
 
 
 def filter_band_rates(etc, filter_wave, filter_thru, exptime_s):
-    """Filter-weighted count rates for the imaging-polarimetry CCD equation.
+    """Filter-weighted rates for the imaging-polarimetry CCD equation.
 
-    Weights the ETC per-pixel object/sky counts by the filter throughput
-    interpolated onto the ETC wavelength grid. Returns (obj_rate, sky_rate,
-    rn_sq) where the rates are counts/s summed over the band and rn_sq is the
-    throughput-weighted summed squared read noise, i.e. the variance of the
-    weighted sum is obj_rate*t + sky_rate*t + rn_sq.
+    Reproduces the reference notebook (Downloads/Exposure Time Calc/
+    exposure_calc.ipynb): the ETC's per-pixel obj/sky/noise columns are each
+    passed through the filter bandpass as a synphot Observation.effstim()
+    would for a PHOTLAM source — a throughput-weighted *mean* over the ETC
+    wavelength grid, not a sum. Verified against the notebook's own logged
+    effstim/S/N output (obj=251.0, sky=258.8, noise=12.56 -> S/N=10.98 for
+    its example target) to within the expected difference from using a
+    different filter curve.
+
+    Returns (obj_rate, sky_rate, noise_const) for use with required_exptime,
+    where noise_const is the unsquared throughput-weighted noise mean (see
+    module docstring — this aggregate convention differs from the per-pixel
+    one in spectropol_pixel_rates, but is taken as-is from the reference).
     """
     thru = np.interp(etc["wave"], filter_wave, filter_thru, left=0.0, right=0.0)
-    obj_rate = np.sum(thru * etc["obj"]) / exptime_s
-    sky_rate = np.sum(thru**2 * etc["sky"]) / exptime_s
-    # Poisson variance of a weighted sum carries w^2; fold the object's extra
-    # (thru^2 - thru) variance term into the sky rate so the CCD-equation
-    # solver (which assumes var = signal + sky*t + rn^2) stays exact.
-    sky_rate += np.sum((thru**2 - thru) * etc["obj"]) / exptime_s
-    rn_sq = np.sum((thru * etc["rn"]) ** 2)
-    return obj_rate, sky_rate, rn_sq
+    weight = np.sum(thru)
+    obj_rate = np.sum(thru * etc["obj"]) / weight / exptime_s
+    sky_rate = np.sum(thru * etc["sky"]) / weight / exptime_s
+    noise_const = np.sum(thru * etc["rn"]) / weight
+    return obj_rate, sky_rate, noise_const
 
 
 def spectropol_pixel_rates(etc, window_aa, exptime_s):
     """Median per-pixel count rates within the spectropolarimetry window.
 
-    Returns (obj_rate, sky_rate, rn_sq) for the representative (median-S/N)
-    pixel inside window_aa, for use with required_exptime.
+    Returns (obj_rate, sky_rate, noise_const) for the representative
+    (median-S/N) pixel inside window_aa, for use with required_exptime.
+    noise_const here is R^2 (squared read noise), matching the ETC's own
+    per-pixel convention — see module docstring.
     """
     lo, hi = window_aa
     sel = (etc["wave"] >= lo) & (etc["wave"] <= hi)
