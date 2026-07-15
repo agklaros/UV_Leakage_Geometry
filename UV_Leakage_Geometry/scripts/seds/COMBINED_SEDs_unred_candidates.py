@@ -18,8 +18,8 @@ from synphot.observation import Observation
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-file = str(BASE_DIR / "data/matched/uv_excess_candidates.csv")
-filtdir = str(BASE_DIR / "data/filters/")
+file = str(BASE_DIR / "data/matched/uv_excess_candidates_w2m.csv")
+filtdir = str(BASE_DIR / "data/filters") + "/"
 templateQSO = str(BASE_DIR / "templates/qso_template.txt")
 
 table = Table.read(file)
@@ -191,26 +191,26 @@ def plot_sed(index, name, ra, dec, zsp):
     plt.show()
 
 
-# Loop 1: DESI candidates — rows where Z > 0
-# Z == 0.0 indicates a W2M row (no DESI redshift); skip
+# Loop 1: DESI candidates — rows where Z is set
+# uv_excess_candidates_w2m.csv is an outer-join vstack (01_crossmatch.ipynb), so a row from
+# the other catalog leaves Z masked/NaN, not 0.0 — skip on isnan, not == 0.0.
 targetID = np.array(table['TARGETID'], dtype=str)
 redshift = mag_arr(table['Z'])
 RA       = mag_arr(table['RA'])
 DEC      = mag_arr(table['DEC'])
 
 for index in range(len(table)):
-    if redshift[index] == 0.0:
+    if np.isnan(redshift[index]):
         continue
     plot_sed(index, targetID[index], RA[index], DEC[index], redshift[index])
 
-# Loop 2: W2M candidates — rows where zsp > 0
-# zsp == 0.0 indicates a DESI row
+# Loop 2: W2M candidates — rows where zsp is set (NaN, not 0.0, marks a DESI row)
 designation = np.array(table['designation'], dtype=str)
 ra_w2m  = mag_arr(table['ra'])
 dec_w2m = mag_arr(table['dec'])
 zsp_w2m = mag_arr(table['zsp'])
 
 for index in range(len(table)):
-    if zsp_w2m[index] == 0.0:
+    if np.isnan(zsp_w2m[index]):
         continue
     plot_sed(index, designation[index], ra_w2m[index], dec_w2m[index], zsp_w2m[index])

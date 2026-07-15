@@ -29,14 +29,17 @@ from scipy.optimize import curve_fit
 #from quasar_unred import load_template, extinguish, fit_composite, find_ebv, mc_spec
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-file = str(BASE_DIR / "data/matched/uv_excess_candidates.csv")
+file = str(BASE_DIR / "data/matched/uv_excess_candidates_w2m.csv")
 table = Table.read(file)
 
 
 targetID = (table['TARGETID'])
 ra = np.array(table['RA'])
 dec = np.array(table['DEC'])
-redshift = (table['Z'])
+# uv_excess_candidates_w2m.csv also has 16 W2M-sourced rows (no TARGETID/RA/DEC/Z here —
+# those live in designation/ra/dec/zsp instead); this script only ever plotted DESI rows,
+# so W2M rows are skipped below rather than plotted with a NaN redshift.
+redshift = np.array(table['Z'].filled(np.nan)) if hasattr(table['Z'], 'filled') else np.asarray(table['Z'], dtype=float)
 ebv = (table['EBV'])
 
 
@@ -96,9 +99,8 @@ plt.figure(figsize=(10, 6))
 
 for index, name in enumerate(targetID):
     zsp = redshift[index]
-    
-    
-
+    if np.isnan(zsp):
+        continue  # W2M-sourced candidate; no DESI redshift/RA/DEC in this row
 
     plt.plot(lam.value/(1+zsp), [flam_fuv.value[index], flam_nuv.value[index],
         flam_g.value[index], flam_r.value[index], flam_i.value[index], flam_z.value[index], flam_y.value[index],flam_Y.value[index],flam_J.value[index],flam_H.value[index],flam_K.value[index],
