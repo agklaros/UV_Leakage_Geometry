@@ -68,12 +68,6 @@ def read_etc_csv(path):
     }
 
 
-def snr_at_time(obj_rate, sky_rate, rn, t):
-    """CCD equation S/N for count rates [counts/s] after exposure t [s]."""
-    signal = obj_rate * t
-    return signal / np.sqrt(signal + sky_rate * t + rn**2)
-
-
 def required_exptime(target_snr, obj_rate, sky_rate, noise_const):
     """Exposure time [s] at which the CCD-equation S/N reaches target_snr.
 
