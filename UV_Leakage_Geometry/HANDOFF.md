@@ -699,3 +699,50 @@
 3. Vet/flag the z < 0.5 candidates in the observing table
 4. Build `notebooks/06_observing_plan.ipynb` wrapping `scripts/obs/`
 5. Draft the Lick proposal around the imaging-polarimetry survey numbers in `kast_obs_plan.pdf`
+
+---
+
+## Session — 2026-07-14
+
+**What we did:**
+- Pulled from `origin/main` at session start (fast-forward, no new commits since 0999909)
+- **Fixed the imaging-polarimetry exposure-time math in `scripts/obs/kast_etc.py`**: `filter_band_rates()` didn't match the reference methodology in `~/Downloads/Exposure Time Calc/` (Karen Leighly's `Notes.pdf` + a synphot notebook with logged output used as ground truth). The old code did a throughput-*squared*-weighted *sum* of obj/sky/noise plus a fabricated Poisson-variance correction term; the reference does a throughput-weighted *mean* (matching `synphot.Observation.effstim()`), unsquared noise, no correction term. Verified the fix reproduces the reference notebook's own logged S/N (10.98 for its example target, using its own filter curve). Separately verified the untouched spectropolarimetry path (squared noise, per-pixel) still reproduces the ETC's own reported `s2n` column to ~2%.
+  - **Impact**: imaging exposure times were previously underestimated by roughly 20-40x. E.g. `J204626.10+002337.6` (g=18.99, S/N=10): imaging time went from 88.8s to 2351s, now sensibly comparable to its spectropol time (2257s) instead of 25x shorter.
+- **Widened `pol_fractions` from 1-4% to 1-10%** in `config/qso_params.yaml` (advisor: typical hoped-for polarization range is 1-10%, not 1-4%). Updated hardcoded "P=4%"/`p4` labels and table columns in `scripts/obs/make_obs_plan_pdf.py` (these don't derive automatically from config) to "P=10%"/`p10`.
+- Regenerated `data/processed/kast_obs_plan.csv`, `figures/kast_exptime_vs_gmag.png`, `figures/kast_obs_plan.pdf` from both fixes above
+- **Discovered `uv_excess_candidates.csv` (18 candidates, DESI + W2M-legacy) is now a legacy sample** — it has moved to `data/matched/legacy/` (alongside `uv_excess_candidates_w2m_gri.csv`, the old `FINAL_COMBINED_QSOs.csv`, `W2M_legacy_*`, and the four unresolved matched-CSV variants PSAWG/PSG/UKPSAWG/UKPSGAW — this reorganization happened between sessions, not done in this thread). `uv_excess_candidates_w2m.csv` (34 candidates, DESI + W2M-current) is canonical. Updated the three remaining consumers to point at it:
+  - `notebooks/04_color_color.ipynb` — also added DESI/W2M column coalescing (`gmag`/`gmag_2`, `Z`/`zsp`) that the swap required (otherwise only 18/34 points would render), and fixed a pre-existing colorbar mislabel ("E(B-V)" when the plot has always colored by redshift)
+  - `scripts/seds/COMBINED_SEDs_unred_candidates.py` — the swap exposed a real bug: its DESI/W2M row-selection checked `Z == 0.0` / `zsp == 0.0`, but the file is an outer-join vstack where the other catalog's rows are `NaN`, not `0.0` — zero rows were being skipped, so every W2M row would have plotted with garbage NaN data. Fixed to `isnan()`. Also fixed an unrelated `filtdir + ff` string-concatenation bug missing a path separator, which broke filter loading entirely regardless of candidate file
+  - `scripts/seds/At_Once_SEDs.py` — has no W2M-row support at all (single loop, DESI-only columns); added a skip for NaN-redshift rows instead of plotting garbage, with a comment noting only the 18 DESI rows are covered by this script
+  - All three verified to run end-to-end headlessly against the real data
+- Committed and pushed as `85acb99` (Kast math fix + pol range), `7a46e09` (leftover `mplcursors` cleanup in `colorcolor_w2m_gri.py`), `42c0edb` (candidate-file swap + bugs it exposed)
+
+**Decisions made:**
+- Polarization sensitivity range is 1-10%, not 1-4% (advisor correction) — `config/qso_params.yaml` is the source of truth
+- `uv_excess_candidates_w2m.csv` (34, DESI + W2M-current) is the canonical candidate sample going forward; `uv_excess_candidates.csv` (18, DESI + W2M-legacy) is legacy, kept in `data/matched/legacy/` for reproducibility only
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Notebooks 01-05 | Unchanged this session |
+| `scripts/obs/` (Kast exposure planning) | Imaging-polarimetry math corrected; pol range widened to 1-10%; `kast_obs_plan.csv`/PNG/PDF regenerated and current |
+| `data/matched/` | Reorganized (not this session): canonical files at top level, old variants + legacy candidate/GRI CSVs moved to `data/matched/legacy/` |
+| Candidate-file consumers | All three remaining `uv_excess_candidates.csv` consumers now point at the canonical `uv_excess_candidates_w2m.csv` and verified to run cleanly |
+| `04_color_color.ipynb`, `COMBINED_SEDs_unred_candidates.py`, `At_Once_SEDs.py` | Fixed and verified this session (see above) |
+
+**Blockers / open questions:**
+- 1/P vs 1/P² exposure-scaling convention still needs K. Leighly's confirmation before proposal numbers are quoted (carried over from 2026-07-13)
+- g mags still not corrected for Galactic extinction (carried over)
+- z < 0.5 W2M candidates still not vetted (carried over)
+- `notebooks/06_observing_plan.ipynb` (wrapping `scripts/obs/`) not yet built (carried over)
+- `At_Once_SEDs.py` still only covers the 18 DESI-sourced candidates — no W2M loop was added (out of scope this session); would need the same Loop 1/Loop 2 pattern as `COMBINED_SEDs_unred_candidates.py` if full 34-candidate coverage is wanted
+- The `data/matched/legacy/` reorganization (four old matched-CSV variants, `FINAL_COMBINED_QSOs.csv`, `W2M_legacy_*`) happened outside this thread — the long-standing `/validate-crossmatch` comparison of those four variants is still outstanding, now against files at their new `legacy/` path
+- All older carried-over items from 2026-07-12/13 remain: W4 Vega→AB offset config reconciliation, missing `absmag_vs_z.ipynb`, notebooks 01-05 end-to-end verification, 52 SED PNGs still in `~/Downloads/` unreviewed
+
+**Suggested next steps:**
+1. Email K. Leighly re: 1/P vs 1/P² convention (carried over from 2026-07-13)
+2. Decide whether `At_Once_SEDs.py` should gain W2M-row support (mirroring `COMBINED_SEDs_unred_candidates.py`) or stay DESI-only by design
+3. Run `/validate-crossmatch` on the four legacy matched-CSV variants now in `data/matched/legacy/` (long-standing open item)
+4. Add Galactic extinction correction to g mags and regenerate the Kast observing plan (carried over)
+5. Build `notebooks/06_observing_plan.ipynb` wrapping `scripts/obs/` (carried over)
