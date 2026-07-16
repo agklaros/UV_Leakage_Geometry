@@ -1,9 +1,13 @@
-"""Render the Kast observing plan (kast_obs_plan.csv) as a PDF report.
+"""Render the Kast imaging-polarimetry observing plan as a PDF report.
 
-Pages: (1) methodology and sample summary, (2) exposure time vs magnitude,
-(3) per-target exposure-time table at the ideal S/N target. All numbers come
-from process_etc_outputs.py output; run that (after fetch_etc_downloads.py
-or manual ETC downloads) before this.
+Pages: (1) methodology and sample summary, (2-3) exposure time vs magnitude
+and per-target table at the ideal S/N target, (4-5) the same figure/table
+pair at the hard-minimum S/N floor. Exposure times are computed directly
+from the downloaded ETC tables via single_kast_etc_imaging's effstim()-based
+math.
+
+Pipeline: make_etc_inputs.py -> fetch_etc_downloads.py ->
+single_kast_etc_imaging.py -> make_obs_plan_pdf.py (this script).
 
 Output: figures/kast_obs_plan.pdf
 """
@@ -14,13 +18,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yaml
 from matplotlib.backends.backend_pdf import PdfPages
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import kast_etc
+import single_kast_etc_imaging as etc_imaging
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-PLAN_CSV = BASE_DIR / "data/processed/kast_obs_plan.csv"
+INPUTS_CSV = BASE_DIR / "data/processed/kast_etc_inputs.csv"
 OUT_PDF = BASE_DIR / "figures/kast_obs_plan.pdf"
 
 PAGE = (8.5, 11)  # US letter, portrait
@@ -36,11 +41,53 @@ def fmt_time(seconds):
     return f"{seconds/3600:.1f} h"
 
 
+def snr_levels(obs):
+    """(label, snr) pairs for the two required S/N levels, e.g. [('snr10', 10.0), ('snr5', 5.0)]."""
+    return [(f"snr{obs['target_snr']:g}", float(obs["target_snr"])),
+            (f"snr{obs['snr_floor']:g}", float(obs["snr_floor"]))]
+
+
+def build_plan(obs):
+    """Per-target imaging-polarimetry exposure times at both the ideal S/N
+    target and the hard-minimum S/N floor, computed straight from the
+    downloaded ETC tables (no kast_obs_plan.csv intermediate)."""
+    downloads = BASE_DIR / obs["etc_downloads_dir"]
+    filter_path = BASE_DIR / obs["imaging_filter"]
+    etc_exptime = float(obs["etc_exptime_s"])
+    pol_fractions = [float(p) for p in obs["pol_fractions"]]
+    max_exp = float(obs["max_single_exptime_s"])
+    levels = snr_levels(obs)
+
+    inputs = pd.read_csv(INPUTS_CSV)
+    rows = []
+    for _, tgt in inputs.iterrows():
+        row = {k: tgt[k] for k in ["target", "gmag_AB", "mag_to_enter"]}
+        if pd.isna(tgt["mag_to_enter"]):
+            row["note"] = "no g magnitude"
+            rows.append(row)
+            continue
+        etc_file = downloads / str(tgt["save_download_as"])
+        if not etc_file.exists():
+            row["note"] = "ETC download missing"
+            rows.append(row)
+            continue
+        for label, snr in levels:
+            t_img = etc_imaging.required_exptime(etc_file, filter_path, etc_exptime, snr)
+            row[f"t_img_{label}_s"] = t_img
+            for p in pol_fractions:
+                tag = f"p{p*100:g}"
+                row[f"t_img_{label}_{tag}_s"] = t_img / p
+                row[f"n_exp_img_{label}_{tag}"] = int(np.ceil(t_img / p / max_exp))
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def summary_page(pdf, df, obs):
     snr = obs["target_snr"]
-    n = df["t_img_snr10_s"].notna().sum()
+    label = f"snr{snr:g}"
+    n = df[f"t_img_{label}_s"].notna().sum()
     fig = plt.figure(figsize=PAGE)
-    fig.text(0.5, 0.94, "Lick Kast Polarimetry — Exposure Time & S/N Plan",
+    fig.text(0.5, 0.94, "Lick Kast Imaging Polarimetry — Exposure Time & S/N Plan",
              ha="center", fontsize=16, weight="bold")
     fig.text(0.5, 0.915, f"UV-excess QSO candidates ({n} targets with g photometry)",
              ha="center", fontsize=11, color="0.35")
@@ -48,7 +95,8 @@ def summary_page(pdf, df, obs):
     s = obs["etc_settings"]
     within = lambda col, h: int((df[col] < h * 3600).sum())
     body = f"""\
-Methodology (K. Leighly notes 2026-07; Chromey, "To Measure the Sky", sec. 9.5.4)
+Methodology (K. Leighly notes 2026-07; E. Glikman's synphot notebook; Chromey,
+"To Measure the Sky", sec. 9.5.4)
 
   1.  Each target is run through the Kast ETC ({obs['etc_page']})
       with a flat template and its PS1 g-band AB magnitude + {obs['pol_flux_offset_mag']} mag: the
@@ -56,14 +104,11 @@ Methodology (K. Leighly notes 2026-07; Chromey, "To Measure the Sky", sec. 9.5.4
   2.  ETC settings, identical for all targets:  dichroic {s['dichroic']}, slit {s['slitwidth']},
       binning {s['binning']}, grism {s['grism']}, grating {s['grating']}, seeing {s['seeing']}\",
       airmass {s['airmass']}, reference exposure {obs['etc_exptime_s']:.0f} s.
-  3.  The ETC returns per-pixel object counts, sky counts, and read noise vs.
-      wavelength. Spectropolarimetry uses the per-pixel S/N of the median pixel
-      in {obs['spectropol_window_AA'][0]:.0f}-{obs['spectropol_window_AA'][1]:.0f} A; imaging polarimetry integrates the counts over the
-      PS1 g profile (synphot) and applies the CCD equation
-      S/N = Nqso / sqrt(Nqso + Nsky + Noise).
+  3.  The ETC's per-pixel object/sky/noise counts vs. wavelength are integrated over the
+      PS1 g bandpass via synphot's Observation.effstim() (a throughput-weighted mean),
+      then combined with the CCD equation S/N = Nqso / sqrt(Nqso + Nsky + Noise).
   4.  The exposure time reaching the required S/N is the exact solution of the
-      CCD equation (Chromey eq. 9.77). Required S/N = {obs['target_snr']:g} (advisor: "ideally
-      >10"); the {obs['snr_floor']:g} floor ("definitely >5") is tabulated in kast_obs_plan.csv.
+      CCD equation (Chromey eq. 9.77). Required S/N = {obs['target_snr']:g} ; the {obs['snr_floor']:g} floor ("definitely >5") is plotted and tabulated separately below.
   5.  Polarimetry penalty: to be sensitive to polarization fraction P, the normal
       exposure time is multiplied by 1/P (rough rule per notes) — x10 for P = 10%,
       x100 for P = 1%. Note P is NOT the scattered fraction: scattering with
@@ -71,13 +116,8 @@ Methodology (K. Leighly notes 2026-07; Chromey, "To Measure the Sky", sec. 9.5.4
 
 Sample summary at S/N = {snr:g}, imaging polarimetry (PS1 g)
 
-      P = 10%: {within('t_img_snr10_p10_s', 1)} targets within 1 h,  {within('t_img_snr10_p10_s', 2)} within 2 h,  {within('t_img_snr10_p10_s', 4)} within 4 h
-      P = 1%:  {within('t_img_snr10_p1_s', 2)} targets within 2 h,  {within('t_img_snr10_p1_s', 4)} within 4 h,  {within('t_img_snr10_p1_s', 8)} within 8 h
-
-Spectropolarimetry at S/N = {snr:g}/pixel is feasible unscaled for the brightest
-targets ({within('t_spec_snr10_s', 1)} within 1 h) but no target fits 4 h once the 1/P factor is
-applied — imaging polarimetry first, spectropolarimetry only for bright
-detections, is the natural protocol.
+      P = 10%: {within(f't_img_{label}_p10_s', 1)} targets within 1 h,  {within(f't_img_{label}_p10_s', 2)} within 2 h,  {within(f't_img_{label}_p10_s', 4)} within 4 h
+      P = 1%:  {within(f't_img_{label}_p1_s', 2)} targets within 2 h,  {within(f't_img_{label}_p1_s', 4)} within 4 h,  {within(f't_img_{label}_p1_s', 8)} within 8 h
 
 Caveats:  g magnitudes are observed-frame, not corrected for Galactic
 extinction; the 1/P rule is approximate (a 3-sigma detection criterion via
@@ -88,17 +128,15 @@ proposal; several candidates lie at z < 0.5 (W2M rows) — vet before targeting.
     plt.close(fig)
 
 
-def figure_page(pdf, df, obs):
-    ok = df.dropna(subset=["gmag_AB", "t_img_snr10_s"])
-    snr = obs["target_snr"]
+def figure_page(pdf, df, snr, snr_desc):
+    label = f"snr{snr:g}"
+    ok = df.dropna(subset=["gmag_AB", f"t_img_{label}_s"])
     fig, ax = plt.subplots(figsize=PAGE)
     fig.subplots_adjust(top=0.7, bottom=0.32)
-    ax.scatter(ok["gmag_AB"], ok["t_img_snr10_s"], color="darkorange",
+    ax.scatter(ok["gmag_AB"], ok[f"t_img_{label}_s"], color="darkorange",
                label=f"Imaging pol. base (PS1 g, S/N={snr:g})")
-    ax.scatter(ok["gmag_AB"], ok["t_img_snr10_p10_s"], color="darkorange",
+    ax.scatter(ok["gmag_AB"], ok[f"t_img_{label}_p10_s"], color="darkorange",
                marker="^", label="Imaging pol., P=10% (x10)")
-    ax.scatter(ok["gmag_AB"], ok["t_spec_snr10_s"], color="steelblue",
-               label=f"Spectropol. base (S/N={snr:g}/pix)")
     for hours, txt in [(1, "1 h"), (4, "4 h")]:
         ax.axhline(hours * 3600, color="0.5", linestyle="--", linewidth=0.8)
         ax.text(ok["gmag_AB"].max(), hours * 3600, f" {txt}", va="bottom",
@@ -106,30 +144,28 @@ def figure_page(pdf, df, obs):
     ax.set_yscale("log")
     ax.set_xlabel("Apparent g magnitude (AB)", fontsize=12)
     ax.set_ylabel("Required exposure time [s]", fontsize=12)
-    ax.set_title(f"Kast exposure times — UV-excess candidates ({len(ok)} targets)")
+    ax.set_title(f"Kast imaging-polarimetry exposure times at S/N = {snr:g} ({snr_desc}) — "
+                 f"UV-excess candidates ({len(ok)} targets)")
     ax.grid(linestyle=":", alpha=0.5)
     ax.legend(loc="upper left", fontsize=9)
     pdf.savefig(fig)
     plt.close(fig)
 
 
-def table_page(pdf, df, obs):
-    snr = obs["target_snr"]
-    ok = df.dropna(subset=["t_img_snr10_s"]).sort_values("gmag_AB")
-    cols = ["Target", "g (AB)", "ETC mag",
-            "Img base", "Img P=10%", "Img P=1%", "N exp (10%)",
-            "Spec base", "Spec P=10%"]
+def table_page(pdf, df, snr, snr_desc):
+    label = f"snr{snr:g}"
+    ok = df.dropna(subset=[f"t_img_{label}_s"]).sort_values("gmag_AB")
+    cols = ["Target", "g (AB)", "ETC mag", "Img base", "Img P=10%", "Img P=1%", "N exp (10%)"]
     cells = [[
         r["target"], f"{r['gmag_AB']:.2f}", f"{r['mag_to_enter']:.2f}",
-        fmt_time(r["t_img_snr10_s"]), fmt_time(r["t_img_snr10_p10_s"]),
-        fmt_time(r["t_img_snr10_p1_s"]), f"{r['n_exp_img_snr10_p10']:.0f}",
-        fmt_time(r["t_spec_snr10_s"]), fmt_time(r["t_spec_snr10_p10_s"]),
+        fmt_time(r[f"t_img_{label}_s"]), fmt_time(r[f"t_img_{label}_p10_s"]),
+        fmt_time(r[f"t_img_{label}_p1_s"]), f"{r[f'n_exp_img_{label}_p10']:.0f}",
     ] for _, r in ok.iterrows()]
 
     fig, ax = plt.subplots(figsize=PAGE)
     ax.axis("off")
-    ax.set_title(f"Per-target exposure times at S/N = {snr:g} "
-                 f"(brightest first; imaging = PS1 g band)", fontsize=11, pad=18)
+    ax.set_title(f"Per-target imaging-polarimetry exposure times at S/N = {snr:g} ({snr_desc}) "
+                 f"(brightest first; PS1 g band)", fontsize=11, pad=18)
     tab = ax.table(cellText=cells, colLabels=cols, loc="upper center",
                    cellLoc="center")
     tab.auto_set_font_size(False)
@@ -141,7 +177,7 @@ def table_page(pdf, df, obs):
         if row == 0:
             cell.set_text_props(weight="bold")
             cell.set_facecolor("#d9edf7")
-    missing = df[df["t_img_snr10_s"].isna()]
+    missing = df[df[f"t_img_{label}_s"].isna()]
     if len(missing):
         ax.text(0.0, 0.02, "Not tabulated: " + ", ".join(
             f"{r['target']} ({r.get('note', 'no data')})" for _, r in missing.iterrows()),
@@ -151,15 +187,19 @@ def table_page(pdf, df, obs):
 
 
 def main():
-    obs = kast_etc.load_config()["observing"]
-    df = pd.read_csv(PLAN_CSV)
+    with open(BASE_DIR / "config/qso_params.yaml") as f:
+        cfg = yaml.safe_load(f)
+    obs = cfg["observing"]
+    df = build_plan(obs)
     with PdfPages(OUT_PDF) as pdf:
         summary_page(pdf, df, obs)
-        figure_page(pdf, df, obs)
-        table_page(pdf, df, obs)
+        figure_page(pdf, df, obs["target_snr"], 'ideal')
+        table_page(pdf, df, obs["target_snr"], 'ideal')
+        figure_page(pdf, df, obs["snr_floor"], 'hard minimum')
+        table_page(pdf, df, obs["snr_floor"], 'hard minimum')
         meta = pdf.infodict()
-        meta["Title"] = "Lick Kast Polarimetry Exposure Plan — UV-excess QSOs"
-        meta["Subject"] = "Exposure times and S/N for spectropolarimetry and imaging polarimetry"
+        meta["Title"] = "Lick Kast Imaging Polarimetry Exposure Plan — UV-excess QSOs"
+        meta["Subject"] = "Exposure times and S/N for imaging polarimetry"
     print(f"wrote {OUT_PDF}")
 
 

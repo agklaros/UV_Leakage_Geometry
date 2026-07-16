@@ -8,21 +8,26 @@ are printed once at the end.
 Output: data/processed/kast_etc_inputs.csv
 """
 
-import sys
 from pathlib import Path
 
 import pandas as pd
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import kast_etc
+import yaml
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 CAND_CSV = BASE_DIR / "data/matched/uv_excess_candidates_w2m.csv"
 OUT_CSV = BASE_DIR / "data/processed/kast_etc_inputs.csv"
 
 
+def target_name(row):
+    """Stable per-target identifier: designation if present, else TARGETID."""
+    if pd.notna(row.get("designation")):
+        return str(row["designation"])
+    return f"TARGETID_{row['TARGETID']}"
+
+
 def main():
-    cfg = kast_etc.load_config()
+    with open(BASE_DIR / "config/qso_params.yaml") as f:
+        cfg = yaml.safe_load(f)
     obs = cfg["observing"]
     pol_offset = float(obs["pol_flux_offset_mag"])
     etc_exptime = float(obs["etc_exptime_s"])
@@ -35,7 +40,7 @@ def main():
 
     rows = []
     for idx, src in cand.iterrows():
-        name = kast_etc.target_name(src)
+        name = target_name(src)
         g = gmag.loc[idx]
         rows.append({
             "target": name,

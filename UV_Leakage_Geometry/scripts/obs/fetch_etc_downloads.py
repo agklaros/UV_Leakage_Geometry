@@ -7,19 +7,17 @@ data/etc_downloads/<save_download_as>. Existing files are kept, so manually
 downloaded tables are never overwritten and reruns only fill gaps.
 """
 
-import sys
 import time
 from pathlib import Path
 
 import pandas as pd
 import requests
 import urllib3
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import kast_etc
+import yaml
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 INPUTS_CSV = BASE_DIR / "data/processed/kast_etc_inputs.csv"
+ETC_COLUMNS = ["wave", "obj", "sky", "noise", "s2n"]
 
 # etc.ucolick.org serves an incomplete certificate chain that this host's CA
 # bundle cannot validate; the payload is public read-only data.
@@ -33,7 +31,8 @@ MAG_SYSTEM_CODES = {"AB": "2", "Vega": "1"}
 
 
 def main():
-    cfg = kast_etc.load_config()
+    with open(BASE_DIR / "config/qso_params.yaml") as f:
+        cfg = yaml.safe_load(f)
     obs = cfg["observing"]
     s = obs["etc_settings"]
     tab_url = obs["etc_page"].rsplit("/", 1)[0] + "/tab_s2n"
@@ -71,7 +70,7 @@ def main():
         resp.raise_for_status()
         # Validate before saving so a server error page never poisons the dir
         header = resp.text.splitlines()[0].strip()
-        if header != ",".join(kast_etc.ETC_COLUMNS):
+        if header != ",".join(ETC_COLUMNS):
             raise RuntimeError(f"{tgt['target']}: unexpected ETC response "
                                f"starting with {header!r}")
         dest.write_text(resp.text)
