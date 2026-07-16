@@ -746,3 +746,49 @@
 3. Run `/validate-crossmatch` on the four legacy matched-CSV variants now in `data/matched/legacy/` (long-standing open item)
 4. Add Galactic extinction correction to g mags and regenerate the Kast observing plan (carried over)
 5. Build `notebooks/06_observing_plan.ipynb` wrapping `scripts/obs/` (carried over)
+
+---
+
+## Session — 2026-07-16
+
+**Scope note:** user is manually rebuilding everything in `scripts/obs/` downstream of data fetching (through plotting) themselves going forward. This session's work was confined to things the user explicitly asked for — the fetching step itself and a new standalone reference script — not the rest of that chain.
+
+**What we did:**
+- Investigated a claim that the ETC input magnitude needs a zero-point correction (from SVO's LICK filter page, `http://svo2.cab.inta-csic.es/svo/theory/fps/index.php?mode=browse&gname=LICK&asttype=`) before the existing `+0.752` polarization-optics penalty. Read `~/Downloads/Exposure Time Calc/Notes.pdf` (K. Leighly's own methodology notes) and confirmed her derivation of `m_pol = m + 0.752` has the zero point cancel out algebraically — no ZP correction belongs in the pipeline. **No code changed**: `make_etc_inputs.py` (`g_AB + pol_flux_offset_mag`) and `fetch_etc_downloads.py` (sends `mag_to_enter` through unmodified) were already correct as-is.
+- User created `scripts/obs/manual_kast_etc.py` by copying all cells from E. Glikman's reference notebook (`~/Downloads/Exposure Time Calc/exposure_calc.ipynb`) — the notebook `kast_etc.py`'s own docstring cites as the ground-truth source for the imaging-polarimetry math. Implemented robust, portable file path handling at the user's request:
+  - Added the standard `BASE_DIR = Path(__file__).resolve().parents[2]` pattern used by every other file in `scripts/obs/`
+  - Bandpass file: was hardcoded to `/Users/eglikman/GoogleDrive/Research/filters/g.dat` (another user's machine, would never resolve) — now reads `config["observing"]["imaging_filter"]` (`data/filters/PAN-STARRS_PS1.g.dat`), same filter every other obs script already uses
+  - Reference input CSV: initially copied Glikman's own `kast_tab.csv` fixture into a new `data/reference/` folder — user asked for this to instead test against a real target, so `data/reference/` was deleted and the script now points at the actual pipeline output `data/etc_downloads/etc_downloads_auto/J204626.10+002337.6.csv`
+  - Per explicit user request, removed the `kast_etc.py` import/dependency entirely — config is now loaded directly via `yaml.safe_load(open(BASE_DIR / "config/qso_params.yaml"))`, making the script fully standalone
+  - `snr_target` now pulled from `config["observing"]["target_snr"]` (10.0) instead of hardcoded/blank
+- User was hand-writing a CCD-equation quadratic solve for required exposure time (mirroring `kast_etc.required_exptime`'s algebra independently, not calling it). Debugged two bugs at the user's request ("fix it so it only returns real and positive roots"):
+  - `C` was missing the `snr_target ** 2` factor that `B` already had (`C = -snr_target**2 * n_noise`, not just `-n_noise`)
+  - `np.roots([A, B, C])` doesn't accept astropy `Quantity` objects (`TypeError: no implementation found for 'numpy.roots'...`) — coefficients now use `.value` to strip units first
+  - Added `real_positive_roots = roots[np.isreal(roots) & (roots.real > 0)].real`, raising `ValueError` if none exist, instead of blindly taking `np.roots()`'s raw (possibly complex/negative) output
+  - Also fixed a leftover crash in the final `print(...)` (string concatenation with a bare `Quantity`/float instead of `str(...)`)
+  - Verified end-to-end: script now runs cleanly and computes **2354 s (≈39.2 min)** for S/N=10 on `J204626.10+002337.6` — matches the ~2351s already recorded in the 2026-07-14 entry from the corrected `kast_etc.py` pipeline (small residual difference expected from filter-curve choice, same as previously documented)
+
+**Decisions made:**
+- SVO LICK zero points are not needed anywhere in the Kast polarization-offset math — confirmed directly from Leighly's own notes, closing that question
+- `manual_kast_etc.py` is an intentionally standalone reference/validation script, decoupled from `kast_etc.py` by design (user's explicit request), even though it duplicates some of that module's logic
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Notebooks 01-05 | Unchanged this session |
+| `scripts/obs/` main pipeline (`kast_etc.py`, `make_etc_inputs.py`, `fetch_etc_downloads.py`, `process_etc_outputs.py`, `make_obs_plan_pdf.py`) | Unchanged and verified still correct (no ZP correction needed) |
+| `scripts/obs/manual_kast_etc.py` | New this session (user-authored + Claude-fixed paths/bugs); standalone, no `kast_etc.py` dependency; runs cleanly against a real ETC download; not wired into any pipeline step |
+| `data/reference/` | Created, then deleted same session — not part of final state |
+| Git | `b150d4e` ("Created manual refactor of ETC") committed by the user mid-session; further edits since (kast_etc decoupling, quadratic-solve fixes) are uncommitted in the working tree as of this entry |
+
+**Blockers / open questions:**
+- `manual_kast_etc.py` still has a duplicated bandpass-loading block (inherited verbatim from the notebook copy-paste, roughly the two identical `SpectralElement.from_file(...)` + `plt.plot(...)` cells) — not cleaned up, out of scope for the path/bug fixes actually requested
+- All carried-over items from 2026-07-14 remain untouched: 1/P vs 1/P² convention (email K. Leighly), Galactic extinction correction for g mags, z<0.5 W2M candidates unvetted, `notebooks/06_observing_plan.ipynb` not built, `/validate-crossmatch` on the four legacy matched CSVs, notebooks 01-05 end-to-end verification, 52 SED PNGs in `~/Downloads/` unreviewed, W4 Vega→AB offset config reconciliation, missing `absmag_vs_z.ipynb`
+- Per the scope note above: the user intends to manually rebuild the rest of `scripts/obs/` (everything after fetching, through plotting) themselves, including a new PDF-creation script "down the line" — future sessions should not touch that range unless explicitly asked
+
+**Suggested next steps:**
+1. Commit/push the uncommitted `manual_kast_etc.py` changes (this session's `/push-to-github` run covers it)
+2. Decide whether to clean up `manual_kast_etc.py`'s duplicated bandpass block, or leave it as a faithful copy of the source notebook
+3. Continue the user's manual rebuild of the post-fetch/pre-plot `scripts/obs/` chain; revisit the planned PDF-creation script when the user is ready
+4. All longstanding items carried over from 2026-07-14 (see above) remain open

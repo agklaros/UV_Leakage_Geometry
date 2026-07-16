@@ -1,8 +1,8 @@
-import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
 
 from synphot import SourceSpectrum, units
 from synphot import SpectralElement
@@ -14,12 +14,12 @@ from astropy.io import ascii
 from astropy.table import Table
 import astropy.units as u
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import kast_etc
-
 BASE_DIR = Path(__file__).resolve().parents[2]
 KAST_TAB_CSV = BASE_DIR / "data/etc_downloads/etc_downloads_auto/J204626.10+002337.6.csv"
-FILTER_PATH = BASE_DIR / kast_etc.load_config()["observing"]["imaging_filter"]
+
+with open(BASE_DIR / "config/qso_params.yaml") as f:
+    cfg = yaml.safe_load(f)
+FILTER_PATH = BASE_DIR / cfg["observing"]["imaging_filter"]
 
 model = Table.read(KAST_TAB_CSV)
 wave = model["wave"]
@@ -88,4 +88,24 @@ n_noise = noise_obs.effstim()
 print(n_noise) # counts from the detector itself
 
 #CCD Equation
-snr = n_qso / np.sqrt(n_qso + n_sky + n_noise)
+# snr = n_qso / np.sqrt(n_qso + n_sky + n_noise)
+# print(snr)
+
+
+n_qso_rate = n_qso / 900
+n_sky_rate = n_sky / 900
+
+
+snr_target = float(cfg["observing"]["target_snr"])
+
+A = n_qso_rate.value ** 2
+B = (-1) * (snr_target ** 2) * (n_qso_rate.value + n_sky_rate.value)
+C = (-1) * (snr_target ** 2) * n_noise.value
+
+roots = np.roots([A, B, C])
+real_positive_roots = roots[np.isreal(roots) & (roots.real > 0)].real
+if real_positive_roots.size == 0:
+    raise ValueError("no real positive root for the required exposure time")
+et_output = real_positive_roots[0]
+
+print("To acheive a SNR of " + str(snr_target) + " requires " + str(et_output) + " seconds, or " + str(et_output / 60) + " minutes.")
