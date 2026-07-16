@@ -792,3 +792,28 @@
 2. Decide whether to clean up `manual_kast_etc.py`'s duplicated bandpass block, or leave it as a faithful copy of the source notebook
 3. Continue the user's manual rebuild of the post-fetch/pre-plot `scripts/obs/` chain; revisit the planned PDF-creation script when the user is ready
 4. All longstanding items carried over from 2026-07-14 (see above) remain open
+
+---
+
+## Session — 2026-07-16 (continued) [RECONSTRUCTED]
+
+**How this was reconstructed:** `/reconstruct-session` was run after this HANDOFF entry's heartbeat (13:30) was found to be older than the newest file in the tree (`single_kast_etc_spectropol.py`, mtime 13:32) — a ~1h15m gap with no corresponding HANDOFF update. Rebuilt from `git log`, `git diff HEAD~1`, `git status`, `git diff`, and direct file inspection; nothing here comes from conversation memory.
+
+**What can be inferred happened after the entry above was written:**
+- Commit `8c1f351` ("Decouple manual_kast_etc.py from kast_etc.py, fix its quadratic exposure-time solve") was made, matching the entry above.
+- After that commit, `scripts/obs/manual_kast_etc.py` was deleted from the working tree (uncommitted — `git status` shows it as `deleted`, not staged).
+- A new untracked file, `scripts/obs/single_kast_etc_spectropol.py`, appeared in its place (mtime 13:32, two minutes after the HANDOFF save at 13:30). Diffing it against the last-committed `manual_kast_etc.py` shows the two files are identical except for one line: the final exposure-time print statement now wraps `et_output` in `np.round(...)` for the seconds figure (`str(np.round(et_output, out=None))` vs. the previous bare `str(et_output)`).
+- Net effect: this looks like a straightforward rename (`manual_kast_etc.py` → `single_kast_etc_spectropol.py`, presumably to better reflect that it's a single-target spectropolarimetry exposure calc) plus a one-line cosmetic rounding fix on the printed result — not a rewrite. No other files changed; `git status` is otherwise clean relative to HEAD.
+- No evidence of a crash mid-edit (the new file is syntactically complete and mirrors the old one almost exactly), so this is most likely a normal in-progress rename that just hadn't been checkpointed yet, rather than data loss.
+
+**Current uncommitted state:**
+| File | Status |
+|---|---|
+| `scripts/obs/manual_kast_etc.py` | Deleted from working tree, not staged |
+| `scripts/obs/single_kast_etc_spectropol.py` | New, untracked; ~identical to the deleted file plus a rounding tweak on the printed exposure time |
+
+**Suggested next steps:**
+1. Confirm with the user that `single_kast_etc_spectropol.py` is the intended final name/location before committing (git will show this as an add+delete rather than a detected rename unless staged together with `git add -A` or `git mv`-equivalent staging).
+2. If confirmed, stage both the deletion and the new file and commit (e.g. "Rename manual_kast_etc.py to single_kast_etc_spectropol.py, round printed exposure time").
+3. The duplicated bandpass-loading block noted in the prior entry is still present in the new file, unresolved.
+4. All longstanding items carried over from 2026-07-14 and the entry above remain open.

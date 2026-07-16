@@ -108,4 +108,4 @@ if real_positive_roots.size == 0:
     raise ValueError("no real positive root for the required exposure time")
 et_output = real_positive_roots[0]
 
-print("To acheive a SNR of " + str(snr_target) + " requires " + str(et_output) + " seconds, or " + str(et_output / 60) + " minutes.")
+print("To acheive a SNR of " + str(snr_target) + " requires " + str(np.round(et_output, out=None)) + " seconds, or " + str(et_output / 60) + " minutes.")
