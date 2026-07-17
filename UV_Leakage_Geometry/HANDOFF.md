@@ -817,3 +817,34 @@
 2. If confirmed, stage both the deletion and the new file and commit (e.g. "Rename manual_kast_etc.py to single_kast_etc_spectropol.py, round printed exposure time").
 3. The duplicated bandpass-loading block noted in the prior entry is still present in the new file, unresolved.
 4. All longstanding items carried over from 2026-07-14 and the entry above remain open.
+
+---
+
+## Session — 2026-07-16 (fourth session)
+
+**What we did:**
+- Session opened in advisory mode (user declined the HANDOFF read-in). User asked what distinguishes the two files in `data/processed/`: explained that `kast_etc_inputs.csv` (built by `make_etc_inputs.py`) is the live per-target input sheet still read by `fetch_etc_downloads.py` and `make_obs_plan_pdf.py`, while `kast_obs_plan.csv` was a dead intermediate — grep confirmed no current script reads it, and `make_obs_plan_pdf.py`'s own docstring says exposure times are now computed directly from the ETC downloads in `build_plan()`, "no `kast_obs_plan.csv` intermediate." It was a leftover from before that refactor (last regenerated 2026-07-14, per that session's entry).
+- User asked to delete `kast_obs_plan.csv`; declined twice in advisory mode (deletion is a file edit) and pointed to `/resume-editing`.
+- Ran `/resume-editing`: read this HANDOFF file in full, confirmed `git status` was clean (up to date with `origin/main`), summarized pipeline state, switched to editing mode.
+- Deleted `data/processed/kast_obs_plan.csv`. It is now committed as `a34f583` ("Removed outdated obs plan csv") — the commit shows in `git log` as already made by session's end, ahead of the `d1b03f0` HEAD this session started from.
+
+**Decisions made:**
+- `kast_obs_plan.csv` is confirmed dead/superseded and was removed rather than archived — nothing in the current pipeline reads it, and its computed columns are now reproduced at runtime by `make_obs_plan_pdf.py:build_plan()` straight from the ETC downloads.
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Notebooks 01-05 | Unchanged this session |
+| `scripts/obs/` main pipeline | Unchanged this session; `kast_etc_inputs.csv` remains the sole live input in `data/processed/` |
+| `data/processed/` | Now contains only `kast_etc_inputs.csv`; stale `kast_obs_plan.csv` deleted (commit `a34f583`) |
+| Git | Clean; `a34f583` is HEAD, matches `origin/main` per `git status` |
+
+**Blockers / open questions:**
+- All longstanding items carried over from 2026-07-14 and 2026-07-16 (earlier sessions) remain open and untouched this session: 1/P vs 1/P² convention (email K. Leighly), Galactic extinction correction for g mags, z<0.5 W2M candidates unvetted, `notebooks/06_observing_plan.ipynb` not built, `/validate-crossmatch` on the four legacy matched CSVs, notebooks 01-05 end-to-end verification, 52 SED PNGs in `~/Downloads/` unreviewed, W4 Vega→AB offset config reconciliation, missing `absmag_vs_z.ipynb`, duplicated bandpass-loading block in `single_kast_etc_spectropol.py`
+- Per the 2026-07-16 scope note (still standing): user is manually rebuilding the post-fetch/pre-plot `scripts/obs/` chain themselves — future sessions should not touch that range unless explicitly asked
+
+**Suggested next steps:**
+1. Verify `a34f583` is actually pushed to `origin/main` (this session's `/push-to-github` run covers it)
+2. All longstanding items above remain the real backlog — none were addressed this session, which was scoped to a single file-cleanup question
+3. Continue the user's manual rebuild of the post-fetch/pre-plot `scripts/obs/` chain per the standing scope note
