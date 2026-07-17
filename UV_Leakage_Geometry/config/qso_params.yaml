@@ -75,6 +75,11 @@ observing:                     # Lick Kast polarimetry planning (methodology: K.
   target_snr: 10.0             # required S/N before pol scaling — advisor: definitely >5, ideally >10
   snr_floor: 5.0               # hard minimum; exposure times reported at both values
   imaging_filter: "data/filters/PAN-STARRS_PS1.g.dat"  # filter profile integrated for imaging polarimetry
-  spectropol_window_AA: [4000.0, 5500.0]  # window where per-pixel S/N requirement is evaluated (median)
+  spectropol_window_AA: [3150.0, 5400.0]  # window where per-pixel S/N requirements are evaluated
+                                          # (blue-grism side, before the d55 dichroic split)
+  spectropol_frac_good: 0.50   # fraction of window pixels that must reach target_snr (0.50 = median)
+  spectropol_frac_floor: 0.90  # fraction of window pixels that must reach snr_floor (joint criterion)
+  spectropol_frac_floor_only: 0.95  # fraction of window pixels that must reach snr_floor in the
+                                    # floor-only variant (no target_snr requirement)
   max_single_exptime_s: 1800.0 # split total integration into exposures no longer than this
 

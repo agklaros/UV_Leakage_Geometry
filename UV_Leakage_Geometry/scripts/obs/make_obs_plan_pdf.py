@@ -72,6 +72,10 @@ def build_plan(obs):
     levels = snr_levels(obs)
     snr_good = float(obs["target_snr"])
     snr_floor = float(obs["snr_floor"])
+    wave_min, wave_max = (float(w) for w in obs["spectropol_window_AA"])
+    frac_good = float(obs["spectropol_frac_good"])
+    frac_floor = float(obs["spectropol_frac_floor"])
+    frac_floor_only = float(obs["spectropol_frac_floor_only"])
 
     inputs = pd.read_csv(INPUTS_CSV)
     rows = []
@@ -96,9 +100,9 @@ def build_plan(obs):
 
         t_spec, frac_spec_good, frac_spec_floor = etc_spectropol.required_exptime(
             etc_file, etc_exptime,
-            snr_good=snr_good, frac_good=0.50,
-            snr_floor=snr_floor, frac_floor=0.90,
-            wave_min=3150.0, wave_max=5400.0,
+            snr_good=snr_good, frac_good=frac_good,
+            snr_floor=snr_floor, frac_floor=frac_floor,
+            wave_min=wave_min, wave_max=wave_max,
         )
         row["t_spec_s"] = t_spec
         row["frac_spec_ge_good"] = frac_spec_good
@@ -110,8 +114,8 @@ def build_plan(obs):
 
         t_spec95, frac_spec95 = etc_spectropol.required_exptime_floor_only(
             etc_file, etc_exptime,
-            snr_floor=snr_floor, frac_floor=0.95,
-            wave_min=3150.0, wave_max=5400.0,
+            snr_floor=snr_floor, frac_floor=frac_floor_only,
+            wave_min=wave_min, wave_max=wave_max,
         )
         row["t_spec95_s"] = t_spec95
         row["frac_spec95_ge_floor"] = frac_spec95
@@ -134,6 +138,9 @@ def summary_page(pdf, df, obs):
              ha="center", fontsize=11, color="0.35")
 
     s = obs["etc_settings"]
+    wmin, wmax = (float(w) for w in obs["spectropol_window_AA"])
+    fg = float(obs["spectropol_frac_good"]) * 100
+    ff = float(obs["spectropol_frac_floor"]) * 100
     within = lambda col, h: int((df[col] < h * 3600).sum())
     body = f"""\
 Methodology (K. Leighly notes 2026-07; E. Glikman's synphot notebook; Chromey,
@@ -156,9 +163,9 @@ Methodology (K. Leighly notes 2026-07; E. Glikman's synphot notebook; Chromey,
       unfavorable geometry can cancel to zero net polarization.
   6.  Spectropolarimetry has no filter to integrate over — every wavelength bin in
       the ETC download needs its own adequate S/N. The blue-grism side only
-      (3150-5400 A, before the d55 dichroic split) is evaluated per pixel with the
+      ({wmin:g}-{wmax:g} A, before the d55 dichroic split) is evaluated per pixel with the
       same CCD equation; the reported exposure time is the larger of two joint
-      requirements: the median pixel reaches S/N >= {obs['target_snr']:g}, and 90% of
+      requirements: {fg:g}% of pixels reach S/N >= {obs['target_snr']:g}, and {ff:g}% of
       pixels reach S/N >= {obs['snr_floor']:g}.
 
 Sample summary at S/N = {snr:g}, imaging polarimetry (PS1 g)
@@ -166,7 +173,7 @@ Sample summary at S/N = {snr:g}, imaging polarimetry (PS1 g)
       P = 10%: {within(f't_img_{label}_p10_s', 1)} targets within 1 h,  {within(f't_img_{label}_p10_s', 2)} within 2 h,  {within(f't_img_{label}_p10_s', 4)} within 4 h
       P = 1%:  {within(f't_img_{label}_p1_s', 2)} targets within 2 h,  {within(f't_img_{label}_p1_s', 4)} within 4 h,  {within(f't_img_{label}_p1_s', 8)} within 8 h
 
-Sample summary, spectropolarimetry (blue side, joint median S/N >= {obs['target_snr']:g} / 90% S/N >= {obs['snr_floor']:g})
+Sample summary, spectropolarimetry (blue side, joint {fg:g}% S/N >= {obs['target_snr']:g} / {ff:g}% S/N >= {obs['snr_floor']:g})
 
       P = 10%: {within('t_spec_p10_s', 1)} targets within 1 h,  {within('t_spec_p10_s', 2)} within 2 h,  {within('t_spec_p10_s', 4)} within 4 h
       P = 1%:  {within('t_spec_p1_s', 2)} targets within 2 h,  {within('t_spec_p1_s', 4)} within 4 h,  {within('t_spec_p1_s', 8)} within 8 h
@@ -243,7 +250,17 @@ def table_page(pdf, df, snr, snr_desc):
     plt.close(fig)
 
 
+def spectropol_criteria(obs):
+    """Window bounds [Å] and pixel-fraction criteria (as percents) from config."""
+    wmin, wmax = (float(w) for w in obs["spectropol_window_AA"])
+    fg = float(obs["spectropol_frac_good"]) * 100
+    ff = float(obs["spectropol_frac_floor"]) * 100
+    ffo = float(obs["spectropol_frac_floor_only"]) * 100
+    return wmin, wmax, fg, ff, ffo
+
+
 def figure_page_spec(pdf, df, obs):
+    wmin, wmax, fg, ff, _ = spectropol_criteria(obs)
     ok = df.dropna(subset=["gmag_AB", "t_spec_s"])
     fig, ax = plt.subplots(figsize=PAGE)
     fig.subplots_adjust(top=0.7, bottom=0.32)
@@ -260,8 +277,8 @@ def figure_page_spec(pdf, df, obs):
     ax.set_yscale("log")
     ax.set_xlabel("Apparent g magnitude (AB)", fontsize=12)
     ax.set_ylabel("Required exposure time [s]", fontsize=12)
-    ax.set_title(f"Kast spectropolarimetry exposure times (blue side, 3150-5400 Å) — "
-                 f"median S/N ≥ {obs['target_snr']:g}, 90% of pixels S/N ≥ {obs['snr_floor']:g} — "
+    ax.set_title(f"Kast spectropolarimetry exposure times (blue side, {wmin:g}-{wmax:g} Å) — "
+                 f"{fg:g}% of pixels S/N ≥ {obs['target_snr']:g}, {ff:g}% of pixels S/N ≥ {obs['snr_floor']:g} — "
                  f"UV-excess candidates ({len(ok)} targets)")
     ax.grid(linestyle=":", alpha=0.5)
     ax.legend(loc="upper left", fontsize=9)
@@ -269,7 +286,8 @@ def figure_page_spec(pdf, df, obs):
     plt.close(fig)
 
 
-def table_page_spec(pdf, df):
+def table_page_spec(pdf, df, obs):
+    wmin, wmax, fg, ff, _ = spectropol_criteria(obs)
     ok = df.dropna(subset=["t_spec_s"]).sort_values("gmag_AB")
     cols = ["Target", "g (AB)", "ETC mag", "Spec base", "Spec P=10%", "Spec P=1%", "N exp (10%)"]
     cells = [[
@@ -280,9 +298,9 @@ def table_page_spec(pdf, df):
 
     fig, ax = plt.subplots(figsize=PAGE)
     ax.axis("off")
-    ax.set_title("Per-target spectropolarimetry exposure times (brightest first; blue side "
-                 "only, 3150-5400 Å)\njoint requirement: median pixel S/N ≥ target, "
-                 "90% of pixels S/N ≥ floor", fontsize=11, pad=18)
+    ax.set_title(f"Per-target spectropolarimetry exposure times (brightest first; blue side "
+                 f"only, {wmin:g}-{wmax:g} Å)\njoint requirement: {fg:g}% of pixels S/N ≥ target, "
+                 f"{ff:g}% of pixels S/N ≥ floor", fontsize=11, pad=18)
     tab = ax.table(cellText=cells, colLabels=cols, loc="upper center",
                    cellLoc="center")
     tab.auto_set_font_size(False)
@@ -304,11 +322,12 @@ def table_page_spec(pdf, df):
 
 
 def figure_page_spec95(pdf, df, obs):
+    wmin, wmax, _, _, ffo = spectropol_criteria(obs)
     ok = df.dropna(subset=["gmag_AB", "t_spec95_s"])
     fig, ax = plt.subplots(figsize=PAGE)
     fig.subplots_adjust(top=0.7, bottom=0.32)
     ax.scatter(ok["gmag_AB"], ok["t_spec95_s"], color="seagreen",
-               label=f"Spectropol. base (blue side, 95% of pixels S/N≥{obs['snr_floor']:g})")
+               label=f"Spectropol. base (blue side, {ffo:g}% of pixels S/N≥{obs['snr_floor']:g})")
     ax.scatter(ok["gmag_AB"], ok["t_spec95_p10_s"], color="seagreen",
                marker="^", label="Spectropol., P=10% (x10)")
     ax.scatter(ok["gmag_AB"], ok["t_spec95_p1_s"], color="seagreen",
@@ -320,8 +339,8 @@ def figure_page_spec95(pdf, df, obs):
     ax.set_yscale("log")
     ax.set_xlabel("Apparent g magnitude (AB)", fontsize=12)
     ax.set_ylabel("Required exposure time [s]", fontsize=12)
-    ax.set_title(f"Kast spectropolarimetry exposure times (blue side, 3150-5400 Å) — "
-                 f"95% of pixels S/N ≥ {obs['snr_floor']:g}, no S/N ≥ {obs['target_snr']:g} requirement — "
+    ax.set_title(f"Kast spectropolarimetry exposure times (blue side, {wmin:g}-{wmax:g} Å) — "
+                 f"{ffo:g}% of pixels S/N ≥ {obs['snr_floor']:g}, no S/N ≥ {obs['target_snr']:g} requirement — "
                  f"UV-excess candidates ({len(ok)} targets)")
     ax.grid(linestyle=":", alpha=0.5)
     ax.legend(loc="upper left", fontsize=9)
@@ -330,6 +349,7 @@ def figure_page_spec95(pdf, df, obs):
 
 
 def table_page_spec95(pdf, df, obs):
+    wmin, wmax, _, _, ffo = spectropol_criteria(obs)
     ok = df.dropna(subset=["t_spec95_s"]).sort_values("gmag_AB")
     cols = ["Target", "g (AB)", "ETC mag", "Spec95 base", "Spec95 P=10%", "Spec95 P=1%", "N exp (10%)"]
     cells = [[
@@ -341,7 +361,7 @@ def table_page_spec95(pdf, df, obs):
     fig, ax = plt.subplots(figsize=PAGE)
     ax.axis("off")
     ax.set_title(f"Per-target spectropolarimetry exposure times (brightest first; blue side "
-                 f"only, 3150-5400 Å)\nsingle requirement: 95% of pixels S/N ≥ {obs['snr_floor']:g} "
+                 f"only, {wmin:g}-{wmax:g} Å)\nsingle requirement: {ffo:g}% of pixels S/N ≥ {obs['snr_floor']:g} "
                  f"(no S/N ≥ {obs['target_snr']:g} requirement)", fontsize=11, pad=18)
     tab = ax.table(cellText=cells, colLabels=cols, loc="upper center",
                    cellLoc="center")
@@ -375,7 +395,7 @@ def main():
         figure_page(pdf, df, obs["snr_floor"], 'hard minimum')
         table_page(pdf, df, obs["snr_floor"], 'hard minimum')
         figure_page_spec(pdf, df, obs)
-        table_page_spec(pdf, df)
+        table_page_spec(pdf, df, obs)
         figure_page_spec95(pdf, df, obs)
         table_page_spec95(pdf, df, obs)
         meta = pdf.infodict()

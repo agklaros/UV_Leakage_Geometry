@@ -848,3 +848,78 @@
 1. Verify `a34f583` is actually pushed to `origin/main` (this session's `/push-to-github` run covers it)
 2. All longstanding items above remain the real backlog — none were addressed this session, which was scoped to a single file-cleanup question
 3. Continue the user's manual rebuild of the post-fetch/pre-plot `scripts/obs/` chain per the standing scope note
+
+---
+
+## Session — 2026-07-17 [RECONSTRUCTED]
+
+**How this was reconstructed:** `/reconstruct-session` was run because the latest commit, `aeabb3a` ("Add spectropolarimetry exposure-time calc and wire it into the PDF plan", 2026-07-17 13:06 -0400), contains a substantial code change with no corresponding HANDOFF entry — the 31 HANDOFF lines bundled into that commit are the previously written 2026-07-16 (fourth session) entry, not documentation of the new code. Rebuilt entirely from `git log`, `git diff HEAD~1`, `git status`, and file inspection; nothing here comes from conversation memory. Note: every file touched by `aeabb3a` shares an identical mtime (13:07:19), which is characteristic of a single git operation (checkout/pull/reset) rather than hand editing on this machine — the work may have been committed elsewhere and synced here, or the tree restored after the crash.
+
+**What commit `aeabb3a` did (inferred from the diff):**
+- **New `scripts/obs/single_kast_etc_spectropol.py` rewrite (133 lines):** the file is no longer the near-copy of `manual_kast_etc.py` described in the 2026-07-16 [RECONSTRUCTED] entry — it is now a purpose-built spectropolarimetry exposure-time module. Rationale in its docstring: unlike imaging (one synphot-integrated S/N), spectropolarimetry has no filter to integrate over, so every wavelength bin in the ETC download needs adequate S/N. It solves the CCD equation per pixel on the blue-grism side only (3150–5400 Å, before the d55 dichroic) and exposes:
+  - `required_exptime(...)` — joint criterion: median pixel reaches S/N ≥ `target_snr` AND 90% of pixels reach S/N ≥ `snr_floor`; returns the larger of the two required times plus achieved fractions
+  - `required_exptime_floor_only(...)` — single criterion: a given fraction (95% in usage) of pixels reach S/N ≥ `snr_floor`
+  - Vectorized `_positive_root` quadratic solve (guards disc < 0 and A == 0 → inf), `_t_required`, `_snr_at` helpers; config loaded standalone from `config/qso_params.yaml` (reads `observing.target_snr`, `observing.snr_floor`, `observing.etc_exptime_s`, `observing.etc_downloads_dir`)
+  - `__main__` block runs both criteria against `J204626.10+002337.6.csv` and prints rounded seconds/minutes plus achieved pixel fractions
+- **`scripts/obs/make_obs_plan_pdf.py` (+213/−16):** the PDF report grew from 5 to 9 pages. `build_plan()` now also computes, per target, `t_spec_s` (joint criterion), `t_spec95_s` (95%-floor-only), their P=10%/P=1% scalings, exposure counts against `max_single_exptime_s`, and achieved S/N fractions. New page builders `figure_page_spec`/`table_page_spec` (pages 6–7, steelblue) and `figure_page_spec95`/`table_page_spec95` (pages 8–9, seagreen). The imaging figure gained a P=1% (×100) series and a 10 h reference line; the summary page adds a spectropolarimetry methodology bullet (item 6), a spectropolarimetry sample-summary block, and an expanded caveats paragraph. Title changed from "Imaging Polarimetry" to "Polarimetry".
+- **`figures/kast_obs_plan.pdf` regenerated** (75.6 KB → 100.2 KB), consistent with the script having been run successfully end-to-end.
+- The previously uncommitted 2026-07-16 (fourth session) HANDOFF entry was committed along with this work.
+
+**Interpretation / decisions inferred:**
+- The spectropolarimetry exposure logic uses fixed criteria hardcoded at both call sites (frac_good=0.50, frac_floor=0.90 joint; frac_floor=0.95 floor-only; wave range 3150–5400 Å) rather than config values — these are candidates for promotion to `config/qso_params.yaml` per the single-source-of-truth policy, but that was evidently not done.
+- The standing 2026-07-16 scope note said the user is manually rebuilding the post-fetch/pre-plot `scripts/obs/` chain themselves; this commit is squarely in that range, consistent with it being the user's own (or user-directed) work.
+
+**Current state:**
+
+| Item | Status |
+|---|---|
+| Git | Clean working tree; HEAD `aeabb3a` = `origin/main`; nothing uncommitted or untracked |
+| `scripts/obs/single_kast_etc_spectropol.py` | Rewritten as a standalone per-pixel spectropolarimetry ETC module; imported by `make_obs_plan_pdf.py` |
+| `scripts/obs/make_obs_plan_pdf.py` | 9-page report (imaging + joint spectropol + floor-only spectropol); regenerated PDF committed |
+| Notebooks 01–05, crossmatch/SED pipeline | Untouched since 2026-07-16 per mtimes and git history |
+
+**Blockers / open questions:**
+- Spectropolarimetry criteria (0.50/0.90 joint, 0.95 floor-only, 3150–5400 Å window) are hardcoded in two places (`single_kast_etc_spectropol.py` `__main__` and `make_obs_plan_pdf.py` `build_plan`) — violates the config single-source-of-truth policy if these are meant to be tunable
+- The duplicated bandpass-loading block flagged in earlier entries no longer applies — the rewrite removed the notebook-copied plotting/bandpass code entirely; that open item can be considered closed
+- All longstanding carried-over items remain: 1/P vs 1/P² convention (email K. Leighly — note the new PDF still prints the 1/P-rule caveat), Galactic extinction correction for g mags, z<0.5 W2M candidates unvetted, `notebooks/06_observing_plan.ipynb` not built, `/validate-crossmatch` on the four legacy matched CSVs, notebooks 01–05 end-to-end verification, 52 SED PNGs in `~/Downloads/` unreviewed, W4 Vega→AB offset config reconciliation, missing `absmag_vs_z.ipynb`
+
+**Suggested next steps:**
+1. Confirm with the user whether the identical-mtime pattern means this work was done on another machine/session — if so, check that machine for any additional uncommitted work
+2. Consider moving the hardcoded spectropolarimetry criteria (pixel fractions, wavelength window) into `config/qso_params.yaml`
+3. Review the regenerated `figures/kast_obs_plan.pdf` pages 6–9 for correctness of the new spectropolarimetry numbers
+4. Longstanding backlog above remains open
+
+---
+
+## Session — 2026-07-17 (second session)
+
+**What we did:**
+- Ran `/reconstruct-session`: found that commit `aeabb3a` (13:06 today) contained the full spectropolarimetry ETC + 9-page PDF work with no HANDOFF entry documenting it, and wrote the `[RECONSTRUCTED]` entry above from the git diff. Noted the identical mtimes across that commit's files suggest a git sync/checkout; the user confirmed they work across two machines (one Mac, one Linux), which explains it.
+- Fixed the config hardcoding flagged in the reconstruction — all spectropolarimetry criteria now live in `config/qso_params.yaml` per the single-source-of-truth policy:
+  - `spectropol_window_AA` updated from the stale `[4000, 5500]` (set 2026-07-13 in `8c52e29`, read by nothing in current code) to `[3150, 5400]`, the value the new code actually uses (blue-grism side before the d55 split)
+  - New keys: `spectropol_frac_good: 0.50`, `spectropol_frac_floor: 0.90`, `spectropol_frac_floor_only: 0.95`
+- `scripts/obs/single_kast_etc_spectropol.py`: `__main__` now pulls window and all three fractions from config; docstring reworded to reference the config keys instead of literal numbers.
+- `scripts/obs/make_obs_plan_pdf.py`: `build_plan()` reads the criteria from config; new `spectropol_criteria(obs)` helper feeds the same values into the summary-page methodology text, sample-summary heading, and the figure/table titles on pages 6–9 (wording generalized from "median" to "{frac}% of pixels" so text can't drift if the fractions are tuned). `table_page_spec` now takes `obs` like its siblings.
+- Verified: `single_kast_etc_spectropol.py` runs cleanly and reproduces the pre-refactor numbers exactly (2760 s joint criterion, 4698 s floor-only for J204626.10+002337.6 — identical by construction since the config holds the previously hardcoded values); `figures/kast_obs_plan.pdf` regenerated successfully (run with `/opt/miniforge3/envs/stenv/bin/python` on this machine because the active `henv` env lacked pandas — user says pandas should normally be available; do not treat the env detail as a durable fact).
+
+**Decisions made:**
+- The code's 3150–5400 Å window (newer, matches the committed PDF) wins over the config's stale 4000–5500 Å value — config was updated to match code, not vice versa, preserving all published numbers.
+- An incorrect auto-memory note about the python env was written and then deleted at the user's request.
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| Notebooks 01–05 | Untouched this session |
+| `config/qso_params.yaml` | Now the sole source for spectropolarimetry window + pixel-fraction criteria |
+| `scripts/obs/single_kast_etc_spectropol.py` / `make_obs_plan_pdf.py` | Fully config-driven; behavior verified identical |
+| `figures/kast_obs_plan.pdf` | Regenerated (same numbers; page 6–9 wording now config-rendered) |
+| Git | Changes staged/committed/pushed by this session's `/push-to-github` run (HANDOFF, config, both scripts, PDF) |
+
+**Blockers / open questions:**
+- All longstanding carried-over items remain: 1/P vs 1/P² convention (email K. Leighly), Galactic extinction correction for g mags, z<0.5 W2M candidates unvetted, `notebooks/06_observing_plan.ipynb` not built, `/validate-crossmatch` on the four legacy matched CSVs, notebooks 01–05 end-to-end verification, 52 SED PNGs in `~/Downloads/` unreviewed, W4 Vega→AB offset config reconciliation, missing `absmag_vs_z.ipynb`
+- The "hardcoded spectropol criteria" and "duplicated bandpass block" items from the two [RECONSTRUCTED] entries are now both closed
+
+**Suggested next steps:**
+1. Review the regenerated PDF pages 6–9 (numbers unchanged, but titles/summary wording updated)
+2. Longstanding backlog above remains the real queue; the 1/P vs 1/P² email to K. Leighly is still the item gating proposal numbers

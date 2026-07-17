@@ -5,9 +5,11 @@ filter bandpass), spectropolarimetry has no filter to integrate over — the
 science product is the spectrum itself, so every wavelength bin ("pixel") in
 the ETC download needs its own adequate S/N. This script solves the CCD
 equation per pixel and picks the exposure time at which:
-  - the median pixel (blue-side only, 3150-5400 A) reaches S/N >= target_snr
-  - 90% of pixels (same range) reach S/N >= snr_floor
-taking whichever of the two requirements demands more time.
+  - spectropol_frac_good of pixels (in the spectropol_window_AA blue-side
+    window) reach S/N >= target_snr
+  - spectropol_frac_floor of pixels (same window) reach S/N >= snr_floor
+taking whichever of the two requirements demands more time. All criteria
+come from the observing section of config/qso_params.yaml.
 """
 
 from pathlib import Path
@@ -110,24 +112,27 @@ if __name__ == "__main__":
     etc_path = BASE_DIR / obs["etc_downloads_dir"] / "J204626.10+002337.6.csv"
     snr_good = float(obs["target_snr"])
     snr_floor = float(obs["snr_floor"])
+    wave_min, wave_max = (float(w) for w in obs["spectropol_window_AA"])
 
     et_output, frac_good, frac_floor = required_exptime(
         etc_path, float(obs["etc_exptime_s"]),
-        snr_good=snr_good, frac_good=0.50,
-        snr_floor=snr_floor, frac_floor=0.90,
-        wave_min=3150.0, wave_max=5400.0,
+        snr_good=snr_good, frac_good=float(obs["spectropol_frac_good"]),
+        snr_floor=snr_floor, frac_floor=float(obs["spectropol_frac_floor"]),
+        wave_min=wave_min, wave_max=wave_max,
     )
     print("To achieve a median S/N of " + str(snr_good) + " requires "
           + str(np.round(et_output)) + " seconds, or " + str(et_output / 60) + " minutes.")
     print("At that exposure time: " + str(np.round(frac_good * 100, 1)) + "% of pixels >= S/N "
           + str(snr_good) + ", " + str(np.round(frac_floor * 100, 1)) + "% of pixels >= S/N " + str(snr_floor))
 
+    frac_floor_only = float(obs["spectropol_frac_floor_only"])
     et_output_95, frac_95 = required_exptime_floor_only(
         etc_path, float(obs["etc_exptime_s"]),
-        snr_floor=snr_floor, frac_floor=0.95,
-        wave_min=3150.0, wave_max=5400.0,
+        snr_floor=snr_floor, frac_floor=frac_floor_only,
+        wave_min=wave_min, wave_max=wave_max,
     )
-    print("To get 95% of pixels >= S/N " + str(snr_floor) + " (no S/N " + str(snr_good)
-          + " requirement) requires " + str(np.round(et_output_95)) + " seconds, or "
+    print("To get " + str(frac_floor_only * 100) + "% of pixels >= S/N " + str(snr_floor)
+          + " (no S/N " + str(snr_good) + " requirement) requires "
+          + str(np.round(et_output_95)) + " seconds, or "
           + str(et_output_95 / 60) + " minutes.")
     print("At that exposure time: " + str(np.round(frac_95 * 100, 1)) + "% of pixels >= S/N " + str(snr_floor))
