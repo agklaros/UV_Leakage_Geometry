@@ -5,11 +5,11 @@ magnitude and per-target table at the ideal S/N target, (4-5) the same
 imaging figure/table pair at the hard-minimum S/N floor, (6-7) the joint
 spectropolarimetry figure/table pair (median S/N-good AND floor-fraction
 S/N-floor), (8-9) a floor-only spectropolarimetry figure/table pair (just
-95% of pixels >= S/N floor, no S/N-good requirement). Imaging exposure times
+90% of pixels >= S/N floor, no S/N-good requirement). Imaging exposure times
 are computed via single_kast_etc_imaging's effstim()-based math;
 spectropolarimetry times via single_kast_etc_spectropol's per-pixel
 percentile math (required_exptime for the joint criterion,
-required_exptime_floor_only for the 95%-floor-only variant — see that
+required_exptime_floor_only for the 90%-floor-only variant — see that
 module's docstring).
 
 Pipeline: make_etc_inputs.py -> fetch_etc_downloads.py ->
@@ -62,7 +62,7 @@ def build_plan(obs):
     spectropolarimetry exposure time (median-S/N-good and floor-fraction-S/N
     criteria combined into one number by
     single_kast_etc_spectropol.required_exptime), and a floor-only
-    spectropolarimetry exposure time (just 95% of pixels >= S/N floor, via
+    spectropolarimetry exposure time (just 90% of pixels >= S/N floor, via
     single_kast_etc_spectropol.required_exptime_floor_only)."""
     downloads = BASE_DIR / obs["etc_downloads_dir"]
     filter_path = BASE_DIR / obs["imaging_filter"]

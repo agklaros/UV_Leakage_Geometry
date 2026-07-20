@@ -1,0 +1,6 @@
+{
+    "python.defaultInterpreterPath": "/opt/miniforge3/envs/stenv/bin/python",
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    "python-envs.pythonProjects": []
+}

@@ -79,7 +79,7 @@ observing:                     # Lick Kast polarimetry planning (methodology: K.
                                           # (blue-grism side, before the d55 dichroic split)
   spectropol_frac_good: 0.50   # fraction of window pixels that must reach target_snr (0.50 = median)
   spectropol_frac_floor: 0.90  # fraction of window pixels that must reach snr_floor (joint criterion)
-  spectropol_frac_floor_only: 0.95  # fraction of window pixels that must reach snr_floor in the
+  spectropol_frac_floor_only: 0.90  # fraction of window pixels that must reach snr_floor in the
                                     # floor-only variant (no target_snr requirement)
   max_single_exptime_s: 1800.0 # split total integration into exposures no longer than this
 
