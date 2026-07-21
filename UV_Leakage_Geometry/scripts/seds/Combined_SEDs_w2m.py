@@ -86,9 +86,8 @@ lam_template = [lam_fuv, lam_nuv, lam_g, lam_r, lam_i, lam_z, lam_y,
                 lam_J_2m, lam_H_2m, lam_K_2m,
                 lam_W1, lam_W2, lam_W3, lam_W4]
 
-# Common axis bounds (shared across all SEDs so plots are directly comparable).
-XLIM = (5e2, 3e5)
-YLIM = (5e-19, 3e-16)
+# Common x-axis bounds (shared across all SEDs so plots are directly comparable).
+X_LO, X_HI = 1000, 15000
 
 flam_fuv = (mag_arr(table['FUVmag']) * u.ABmag).to(su.FLAM, u.spectral_density(lam_fuv))
 flam_fuv[flam_fuv > (1e-11 * su.FLAM)] = np.nan
@@ -191,16 +190,21 @@ def plot_sed(index, name, ra, dec, zsp):
 
     plt.plot(templateWave, scale * templateFlux,
              color='gray', alpha=0.6, label='QSO template')
-    lam_tpl_rest = np.array([l.value for l in lam_template]) / (1 + zsp)
-    valid_tpl = np.isfinite(synth_flx)
-    plt.scatter(lam_tpl_rest[valid_tpl], scale * synth_flx[valid_tpl],
-                color='orange', marker='s', zorder=5, label='template synth phot')
 
-    
-    plt.loglog()
+    # X range is fixed for cross-object comparability; the y range is sized to the
+    # photometry actually inside that window, so the model may run off-frame but no
+    # observed data point is ever clipped out of view.
+    lam_rest = lam_all / (1 + zsp)
+    in_window = np.isfinite(flam_all) & (lam_rest >= X_LO) & (lam_rest <= X_HI)
+    y_hi = flam_all[in_window].max() * 1.1 if in_window.any() else 3e-17
+
+    plt.xscale('linear')
+    plt.yscale('linear')
+    plt.xlim(X_LO, X_HI)
+    plt.ylim(0, y_hi)
+    plt.xlabel('Rest-frame Wavelength (Å)')
+    plt.ylabel(r'$F_\lambda$ (erg s$^{-1}$ cm$^{-2}$ Å$^{-1}$)')
     plt.title(f'RA = {ra:.4f}   DEC = {dec:.4f}')
-    plt.xlim(*XLIM)
-    plt.ylim(*YLIM)
     plt.legend(fontsize=8)
     plt.tight_layout()
 
@@ -209,26 +213,26 @@ def plot_sed(index, name, ra, dec, zsp):
     plt.close()
 
 
-# Loop 1: DESI candidates — rows where Z > 0
-# Z == 0.0 indicates a W2M row (no DESI redshift); skip
+# Loop 1: DESI candidates — rows where Z is set
+# uv_excess_candidates_w2m.csv is an outer-join vstack (01_crossmatch.ipynb), so a row from
+# the other catalog leaves Z masked/NaN, not 0.0 — skip on isnan, not == 0.0.
 targetID = np.array(table['TARGETID'], dtype=str)
 redshift = mag_arr(table['Z'])
 RA       = mag_arr(table['RA'])
 DEC      = mag_arr(table['DEC'])
 
 for index in range(len(table)):
-    if redshift[index] == 0.0:
+    if np.isnan(redshift[index]):
         continue
     plot_sed(index, targetID[index], RA[index], DEC[index], redshift[index])
 
-# Loop 2: W2M candidates — rows where zsp > 0
-# zsp == 0.0 indicates a DESI row
+# Loop 2: W2M candidates — rows where zsp is set (NaN, not 0.0, marks a DESI row)
 designation = np.array(table['designation'], dtype=str)
 ra_w2m  = mag_arr(table['ra'])
 dec_w2m = mag_arr(table['dec'])
 zsp_w2m = mag_arr(table['zsp'])
 
 for index in range(len(table)):
-    if zsp_w2m[index] == 0.0:
+    if np.isnan(zsp_w2m[index]):
         continue
     plot_sed(index, designation[index], ra_w2m[index], dec_w2m[index], zsp_w2m[index])
