@@ -58,6 +58,9 @@ def required_exptime(etc_path, filter_path, etc_exptime_s, snr_target):
     n_sky = Observation(sp_sky, bp, force="extrap").effstim()  # counts from the sky through the filter
     n_noise = Observation(sp_noise, bp, force="extrap").effstim()  # counts from the detector itself
 
+    print(n_qso)
+    print(n_sky)
+    print(n_noise)
     n_qso_rate = n_qso / etc_exptime_s
     n_sky_rate = n_sky / etc_exptime_s
 
@@ -66,7 +69,11 @@ def required_exptime(etc_path, filter_path, etc_exptime_s, snr_target):
     B = -(snr_target ** 2) * (n_qso_rate.value + n_sky_rate.value)
     C = -(snr_target ** 2) * n_noise.value
 
+    print(A)
+    print(B)
+    print(C)
     roots = np.roots([A, B, C])
+    print(roots)
     real_positive_roots = roots[np.isreal(roots) & (roots.real > 0)].real
     if real_positive_roots.size == 0:
         raise ValueError(f"{etc_path}: no real positive root for the required exposure time")

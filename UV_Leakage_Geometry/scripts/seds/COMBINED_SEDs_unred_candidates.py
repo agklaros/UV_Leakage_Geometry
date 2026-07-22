@@ -176,15 +176,17 @@ def plot_sed(index, name, ra, dec, zsp):
              color='gray', alpha=0.6, label='QSO template')
     lam_tpl_rest = np.array([l.value for l in lam_template]) / (1 + zsp)
     valid_tpl = np.isfinite(synth_flx)
-    plt.scatter(lam_tpl_rest[valid_tpl], scale * synth_flx[valid_tpl],
-                color='orange', marker='s', zorder=5, label='template synth phot')
+    # plt.scatter(lam_tpl_rest[valid_tpl], scale * synth_flx[valid_tpl],
+    #             color='orange', marker='s', zorder=5, label='template synth phot')
 
     x_lo = 1e3
     x_hi = 1e4
     plt.xscale('linear')
     plt.yscale('linear')
     plt.xlim(x_lo, x_hi)
-    plt.ylim(0,3e-17)
+    plt.ylim(0, 1e-16)
+    plt.xlabel('Rest Wavelength (Å)')
+    plt.ylabel(r'$F_\lambda$ (erg s$^{-1}$ cm$^{-2}$ Å$^{-1}$)')
     plt.title(f'RA = {ra:.4f}   DEC = {dec:.4f}')
     plt.legend(fontsize=8)
     plt.tight_layout()

@@ -34,12 +34,28 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 file = str(BASE_DIR / "data/matched/FINAL_COMBINED_QSOs_W2M.csv")
 table = Table.read(file)
 
-
 targetID = (table['TARGETID'])
 ra = np.array(table['RA'])
 dec = np.array(table['DEC'])
 redshift = (table['Z'])
-ebv = (table['EBV'])
+ebv = np.array(table['EBV'], dtype=float)
+
+candidates_file = str(BASE_DIR / "data/matched/uv_excess_candidates_w2m.csv")
+candidates_table = Table.read(candidates_file)
+# '0' is the fill value for masked TARGETID/designation (outer-join placeholder,
+# not a real identifier) -- exclude it so every masked row doesn't match every other
+sentinel_ids = {'0', 'nan', '--'}
+candidate_ids = (
+    (set(np.array(candidates_table['TARGETID'], dtype=str)) |
+     set(np.array(candidates_table['designation'], dtype=str)))
+    - sentinel_ids
+)
+row_ids = np.array(table['TARGETID'], dtype=str)
+row_designations = np.array(table['designation'], dtype=str)
+is_candidate = (
+    np.isin(row_ids, list(candidate_ids)) |
+    np.isin(row_designations, list(candidate_ids))
+)
 
 
 # define the wavelength array
@@ -87,45 +103,37 @@ nuvg = flam_nuv / flam_g
 gr = flam_g / flam_r
 ri = flam_r / flam_i
 
-# mask out rows where any of the underlying mags used in these colors is 0
+# mask out rows where a mag used in that specific color is 0
 # (0 indicates a missing/bad measurement, not a real magnitude)
-zero_mask = (
-    (FUVmags == 0) | (NUVmags == 0) | (gmags == 0) | (rmags == 0) | (imags == 0)
-)
-fuvnuv[zero_mask] = np.nan
-nuvg[zero_mask] = np.nan
-gr[zero_mask] = np.nan
-ri[zero_mask] = np.nan
+fuvnuv[(FUVmags == 0) | (NUVmags == 0)] = np.nan
+nuvg[(NUVmags == 0) | (gmags == 0)] = np.nan
+gr[(gmags == 0) | (rmags == 0)] = np.nan
+ri[(rmags == 0) | (imags == 0)] = np.nan
 
 
-#Only display E(B-V) > 0.2:
-#ebv[ebv < 0.2] = np.nan
+not_candidate = ~is_candidate
 
+fig, (ax_blue, ax_red) = plt.subplots(1, 2, figsize=(16, 8))
 
-fig, ax_blue = plt.subplots(figsize=(10, 10))
-ax_red = ax_blue.twiny().twinx()
+ax_blue.scatter(nuvg[not_candidate], fuvnuv[not_candidate], c='tab:blue', s=100, zorder=2, label='Not UV-Excess')
+ax_blue.scatter(nuvg[is_candidate], fuvnuv[is_candidate], c='tab:red', s=100, zorder=2, label='UV-Excess')
+ax_red.scatter(gr[not_candidate], nuvg[not_candidate], c='tab:blue', s=100, zorder=2, label='Not UV-Excess')
+ax_red.scatter(gr[is_candidate], nuvg[is_candidate], c='tab:red', s=100, zorder=2, label='UV-Excess')
 
-sc_blue = ax_blue.scatter(nuvg, fuvnuv, c='blue', s=100, zorder=2, alpha=0.5, label='FUV/NUV vs NUV/G')
-sc_red = ax_red.scatter(gr, nuvg, c='red', s=100, zorder=2, alpha=0.5, label='NUV/G vs G/R')
-
-ax_blue.set_xlabel('NUV/G (blue)', color='blue')
-ax_blue.set_ylabel('FUV/NUV (blue)', color='blue')
-ax_blue.tick_params(axis='x', colors='blue')
-ax_blue.tick_params(axis='y', colors='blue')
-
-ax_red.xaxis.set_label_position('top')
-ax_red.xaxis.tick_top()
-ax_red.set_xlabel('G/R (red)', color='red')
-ax_red.set_ylabel('NUV/G (red)', color='red')
-ax_red.tick_params(axis='x', colors='red')
-ax_red.tick_params(axis='y', colors='red')
-
-
+ax_blue.set_xlabel('NUV/G')
+ax_blue.set_ylabel('FUV/NUV')
+ax_blue.set_title('FUV/NUV vs NUV/G')
 ax_blue.axhline(y=1)
 ax_blue.axvline(x=1)
+ax_blue.legend(loc='best')
 
-handles = [sc_blue, sc_red]
-labels = [h.get_label() for h in handles]
-ax_blue.legend(handles, labels, loc='best')
+ax_red.set_xlabel('G/R')
+ax_red.set_ylabel('NUV/G')
+ax_red.set_title('NUV/G vs G/R')
+ax_red.axhline(y=1)
+ax_red.axvline(x=1)
+ax_red.legend(loc='best')
 
+fig.suptitle('Color-Color Diagrams: UV-Excess sources')
+plt.tight_layout()
 plt.show()
