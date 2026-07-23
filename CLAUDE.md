@@ -62,6 +62,12 @@ Key values:
 - **AllWISE**: Vega system; columns are `w1mpro`, `w2mpro`, `w3mpro`, `w4mpro`
 - Filter curves in `filters/` are loaded via `synphot.SpectralElement.from_file()`; see `docs/filters.md` for the full table
 
+## UV-Excess Sample & Control Sample
+
+- `data/matched/UV_EXCESS_SAMPLE.csv` — **canonical, final** UV-excess sample (29 QSOs): the 34 candidates in `uv_excess_candidates_w2m.csv` after manual visual SED inspection via `scripts/seds/review_uv_excess_sample.py` (Accept/Reject against the unreddened template overlay). Decisions logged incrementally in `data/matched/UV_EXCESS_SAMPLE_progress.csv`.
+- `data/matched/uv_excess_with_controls_nn.csv` — **canonical** control sample: for each of the 29 vetted candidates, the single nearest neighbor in standardized 3D (z, E(B-V), g-mag) space from `FINAL_COMBINED_QSOs_W2M.csv`, built by `scripts/matching/build_control_sample_nn.py`. Excludes both the known sample members and any other catalog row that independently satisfies the UV-excess criterion. Controls may be reused across candidates (true 1-NN).
+- `data/matched/legacy/uv_excess_with_controls.csv` — **superseded**; the older binned E(B-V) + Δz-tolerance control match (`scripts/matching/build_control_sample_w2m.py`, kept in place for reference), built against the earlier unvetted 34-candidate list. Do not use for analysis.
+
 ## Data Layout
 
 - `data/raw/` — **Immutable**; never modify after download
