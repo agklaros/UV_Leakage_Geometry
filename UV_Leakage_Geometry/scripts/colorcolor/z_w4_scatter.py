@@ -8,7 +8,7 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_CSV = BASE_DIR / "data/matched/FINAL_COMBINED_QSOs_W2M.csv"
-CAND_CSV = BASE_DIR / "data/matched/uv_excess_candidates_w2m.csv"
+CAND_CSV = BASE_DIR / "data/matched/UV_EXCESS_SAMPLE.csv"
 
 # TARGETID must stay integer: as float64 these 17-digit IDs exceed 2^53 and
 # distinct IDs collapse together, over-matching candidates.
