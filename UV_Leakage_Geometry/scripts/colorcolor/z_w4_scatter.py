@@ -52,7 +52,7 @@ ax.scatter(z[mask & ~is_candidate], absW4[~is_candidate[mask]], s=8, alpha=0.4, 
 ax.scatter(z[mask & is_candidate], absW4[is_candidate[mask]], s=20, alpha=0.9, color="tab:red", label="UV-excess")
 
 ax.set_xlabel("Redshift (Z / zsp)", fontsize=12)
-ax.set_ylabel(r"Absolute W4 magnitude $M_{W4}$ [AB mag]", fontsize=12)
+ax.set_ylabel(r"W4 magnitude $M_{W4}$ [AB mag]", fontsize=12)
 ax.invert_yaxis()
 ax.grid(linestyle=":", alpha=0.5)
 ax.legend(loc="best")
@@ -78,5 +78,5 @@ ax_histx.set_ylabel("Number of sources", fontsize=12)
 ax_histx.grid(linestyle=":", alpha=0.5)
 ax_histx.tick_params(labelbottom=False)
 
-fig.suptitle("Redshift vs. absolute WISE W4 magnitude — FINAL_COMBINED_QSOs_W2M")
+fig.suptitle("Redshift vs. absolute WISE W4 magnitude")
 plt.show()
