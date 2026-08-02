@@ -86,8 +86,10 @@ def coalesce(df, primary, fallback):
 
 
 def main():
-    cand = pd.read_csv(SAMPLE_CSV)
-    full = pd.read_csv(FULL_CSV)
+    # TARGETID must stay a string: as float64 these 17-digit IDs exceed 2^53
+    # and distinct IDs collapse together.
+    cand = pd.read_csv(SAMPLE_CSV, dtype={"TARGETID": str})
+    full = pd.read_csv(FULL_CSV, dtype={"TARGETID": str})
 
     for df in (cand, full):
         df["_z"] = coalesce(df, "Z", "zsp")
