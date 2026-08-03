@@ -30,6 +30,8 @@ is_candidate = matched_by_id | matched_by_designation
 W4_VEGA_TO_AB = 2.5 * np.log10(3631 / 8.363)  # ≈ 6.594
 z = df["Z"].where(df["Z"].notna(), df["zsp"])
 w4 = df["W4mag"].where(df["W4mag"].notna(), df["w4mag"]) + W4_VEGA_TO_AB
+# Z and zsp never overlap, so which one is populated identifies the parent sample.
+is_desi = df["Z"].notna()
 
 mask = z.notna() & w4.notna() & (z > 0)
 
@@ -48,12 +50,16 @@ ax, ax_hist = axes[1]
 ax_hist.sharey(ax)
 ax_histx.sharex(ax)
 ax_corner.set_visible(False)
-ax.scatter(z[mask & ~is_candidate], absW4[~is_candidate[mask]], s=8, alpha=0.4, color="tab:blue", label="Not UV-excess")
-ax.scatter(z[mask & is_candidate], absW4[is_candidate[mask]], s=20, alpha=0.9, color="tab:red", label="UV-excess")
+not_candidate_desi = mask & ~is_candidate & is_desi
+not_candidate_w2m = mask & ~is_candidate & ~is_desi
+ax.scatter(z[not_candidate_desi], absW4[not_candidate_desi[mask]], s=8, alpha=1.0, color="lightblue", label="Not UV-excess (DESI)")
+ax.scatter(z[not_candidate_w2m], absW4[not_candidate_w2m[mask]], s=8, alpha=1.0, color="blue", label="Not UV-excess (W2M)")
+ax.scatter(z[mask & is_candidate], absW4[is_candidate[mask]], s=20, alpha=0.9, color="red", marker="s", label="UV-excess")
 
 ax.set_xlabel("Redshift (Z / zsp)", fontsize=12)
 ax.set_ylabel(r"W4 magnitude $M_{W4}$ [AB mag]", fontsize=12)
-ax.invert_yaxis()
+ax.set_xlim(right=1.5)
+ax.set_ylim(-27.5, -33)
 ax.grid(linestyle=":", alpha=0.5)
 ax.legend(loc="best")
 

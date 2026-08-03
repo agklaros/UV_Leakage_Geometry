@@ -87,11 +87,17 @@ notebooks should load from it, not hardcode values):
 - data/archive/ and data/matched/legacy/ files are kept for reference but not used in current analysis
 - Always ask about reading HANDOFF.md before starting any work
 
+## Session End — Sync Scripts to GitHub and Notebooks
+
+Every `/end-session` must, in addition to writing the HANDOFF.md summary:
+1. Push all `scripts/` edits made during the session to GitHub via `/push-to-github`.
+2. Port those same edits into the corresponding notebook(s) so the notebooks stay a live mirror of the scripts, not just at "finished and stable" milestones (see Conventions below).
+
 ## Available Commands
 
 | Command | Purpose |
 |---|---|
-| `/end-session` | Write session summary to HANDOFF.md |
+| `/end-session` | Write session summary to HANDOFF.md; push scripts/ edits to GitHub and port them into the notebooks |
 | `/checkpoint` | Mid-session save state |
 | `/reconstruct-session` | Rebuild HANDOFF.md after a crash |
 | `/advisory-mode` | Switch to read-only mode |

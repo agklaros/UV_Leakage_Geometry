@@ -86,16 +86,22 @@ Key values:
 - [ ] UV-excess candidate sample target is <100 — flag and investigate if it grows larger
 - [ ] Crossmatch radius (2 arcsec) not yet optimized across catalogs
 - [ ] Primary working matched CSV not yet determined — run `/validate-crossmatch` on the four variants in `data/matched/` to compare band coverage
-- [ ] GitHub remote not yet initialized — `/push-to-github` and `/sync-from-github` will not work until `git remote` is set up
+- [x] Issue logged 2026-07-07, fixed by 2026-08-03 (unclear exact date): GitHub remote is initialized — `origin` → `https://github.com/agklaros/UV_Leakage_Geometry.git`, `main` tracks `origin/main`. `/push-to-github` and `/sync-from-github` are usable.
 - [ ] Issue logged 2026-07-07: no script/notebook actually fits E(B-V) via `quasar_unred.find_ebv` — all "unred" scripts and `03_unreddened_template.ipynb` only do template overlay + median-flux scaling for visual comparison. The patchy-obscuration model equation above is a stated goal, not yet implemented.
 - [ ] Issue logged 2026-07-07: `scripts/seds/COMBINED_SEDs_unred.py` references `data/matched/COMBINED_matched.csv` (does not exist) and `Jmag_2mass`/`Hmag_2mass`/`Kmag_2mass` columns (not present in any current matched CSV) — appears broken/aspirational, not ported to notebooks
 - [x] Issue logged 2026-07-07, fixed 2026-07-07: CLAUDE.md previously stated the UV-excess E(B-V) threshold as >0.1; the actual scripts and `config/qso_params.yaml`'s `uv_excess.ebv_min` use >0.2 — corrected above to match config (the single source of truth)
+
+## Session End — Sync Scripts to GitHub and Notebooks
+
+Every `/end-session` must, in addition to writing the HANDOFF.md summary:
+1. Push all `scripts/` edits made during the session to GitHub via `/push-to-github`.
+2. Port those same edits into the corresponding notebook(s) so the notebooks stay a live mirror of the scripts, not just at "finished and stable" milestones (see Running the Project).
 
 ## Slash Commands
 
 | Command | Purpose |
 |---|---|
-| `/end-session` | Write session summary to HANDOFF.md |
+| `/end-session` | Write session summary to HANDOFF.md; push scripts/ edits to GitHub and port them into the notebooks |
 | `/checkpoint` | Mid-session save state |
 | `/reconstruct-session` | Rebuild HANDOFF.md after a crash |
 | `/advisory-mode` | Switch to read-only mode |
