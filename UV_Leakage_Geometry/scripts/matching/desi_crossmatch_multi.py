@@ -6,7 +6,7 @@ from astroquery.xmatch import XMatch
 
 BASE_DIR     = Path(__file__).resolve().parents[2]
 COMBINED_CSV = str(BASE_DIR / "data/raw/COMBINED_QSOS_TAB.csv")
-COMBINED_OUT = str(BASE_DIR / "data/matched/COMBINED_matched.csv")
+COMBINED_OUT = str(BASE_DIR / "data/matched/DESI_COMBINED_matched.csv")
 RADIUS       = 2 * u.arcsec
 
 BASE_COLS  = ['TARGETID', 'RA', 'DEC', 'Z', 'SPECTYPE', 'EBV', 'EBV_ERR']
@@ -20,6 +20,7 @@ OUT_FIELDS = BASE_COLS + [
 
 #Load base catalog
 base = Table.read(COMBINED_CSV, format='csv')
+base = base[base['SPECTYPE'] == 'QSO']  # never match stars/galaxies
 
 
 #Match to PanSTARRS keeping only double matches

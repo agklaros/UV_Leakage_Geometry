@@ -923,3 +923,52 @@
 **Suggested next steps:**
 1. Review the regenerated PDF pages 6–9 (numbers unchanged, but titles/summary wording updated)
 2. Longstanding backlog above remains the real queue; the 1/P vs 1/P² email to K. Leighly is still the item gating proposal numbers
+
+---
+
+## Session — 2026-08-03
+
+**What we did:**
+- **Rebuilt the entire `notebooks/` pipeline from scratch** to mirror the current, working `scripts/` pipeline. The old `01_crossmatch.ipynb`–`05_histograms.ipynb` (migrated once on 2026-07-07/08, never updated since) predated the entire visual-vetting + control-sample stage added 2026-07-23 — three of the five would have raised `FileNotFoundError` if run today, and none had any concept that `UV_EXCESS_SAMPLE.csv` or the control sample existed. This closes the "notebooks 01–05 end-to-end verification" item that had been open since 2026-07-07, and moots the old "`04_color_color.ipynb` bug-parity vs. fixed `colorcolor.py`" item (that notebook no longer exists). Deleted all five old notebooks; authored five new ones matching the actual current pipeline stages:
+  - `01_crossmatch.ipynb` — DESI/W2M-current/W2M-legacy crossmatch + crossmatch-quality figure
+  - `02_merge_and_dedupe.ipynb` — combine + dedupe → `FINAL_COMBINED_QSOs_W2M.csv` + row-count figure
+  - `03_uv_excess_selection.ipynb` — color-color/E(B-V) selection → `uv_excess_candidates_w2m.csv` (34) + 4 figures
+  - `04_visual_review_final_sample.ipynb` — SED/template-overlay methodology, representative accept/reject examples, loads the final 29 (`UV_EXCESS_SAMPLE.csv`), z-vs-W4 diagnostic
+  - `05_control_sample.ipynb` — nearest-neighbor control sample (this project's first notebook representation of that step) → `uv_excess_with_controls_nn.csv` + match-quality figure
+- **Found and fixed two real bugs in `scripts/matching/desi_crossmatch_multi.py`**: it never filtered `SPECTYPE == 'QSO'` (CLAUDE.md's known-issues list said this was fixed 2026-07-07, but the fix only ever landed in the old notebook, never backported to the script), and it wrote to `data/matched/COMBINED_matched.csv` while every downstream consumer reads `DESI_COMBINED_matched.csv` (confirmed via `git log` this constant has never matched the consumed filename). Fixed both; verified with a standalone run (5,452 QSO-only rows, correct filename).
+- Added missing 2MASS Vega→AB offsets/pivot wavelengths to `config/qso_params.yaml` (`vega_to_ab_offsets_2mass`, `band_wavelengths_2mass_AA`) — these were hardcoded in `uv_excess_review_report.py`/`review_uv_excess_sample.py` but never in config. New notebook 04 loads them from config instead of hardcoding.
+- Reconciled two more stale docs found during research: the second, outdated `CLAUDE.md` nested at `UV_Leakage_Geometry/UV_Leakage_Geometry/CLAUDE.md` (said 4 notebooks, E(B-V)>0.1, no vetted-sample/control-sample concept), and `docs/pipeline_overview.md` (same stale 4-stage description, wrong filenames). Fixed a stale `filters/` → `data/filters/` path in `docs/catalogs.md`.
+- Also updated the **outer, canonical** `CLAUDE.md`'s Pipeline section (one deliberate deviation from the session's plan, which said to leave that file untouched) — its notebook list named the exact five files just deleted, so leaving it as-is would have pointed at nonexistent notebooks. Only that section plus one Known Issues line were touched.
+- **Verified all 5 new notebooks by actually executing them end-to-end.** Installed missing `nbconvert`/`nbformat`/`ipykernel` into the project's Python 3.14 environment (the astro stack — astropy/astroquery/synphot/pandas/PyYAML — was already present, but these execution tools weren't) and registered a Jupyter kernel named `uvleakage`. Every stage's row count matched the previously-known canonical values exactly (5,489 combined → 34 candidates [18 DESI + 16 W2M] → 29 accepted/5 rejected → 54 with controls), and — the strongest check — **every regenerated `data/matched/*.csv` file came back byte-identical to what was already committed**, confirming the new notebooks faithfully reproduce the existing analysis rather than silently changing it.
+
+**Decisions made:**
+- New notebook structure is 1 notebook per pipeline stage (5 total), replacing the old thematic split (crossmatch / build-SEDs / template-overlay / color-color / histograms) — chosen to mirror the user's own description of the process and to add the previously-undocumented control-sample stage.
+- Control-sample construction (`build_control_sample_nn.py`) is in scope for the notebook rebuild; the Lick Kast polarimetry-planning scripts (`scripts/obs/*`) are explicitly out of scope — separate future work, per user decision this session.
+- New notebooks load wavelengths/offsets/thresholds from `config/qso_params.yaml` wherever a value already lives there, even where the underlying script hardcodes it — closes part of the long-standing config-single-source-of-truth gap for the crossmatch/selection/review stages (previously only `build_control_sample_nn.py` did this).
+- The W4 Vega→AB discrepancy (`z_w4_scatter.py`'s SVO-derived 6.594 vs. config's 6.620) was again deliberately preserved as-is in new notebook 04, per the existing 2026-07-12 decision — still not reconciled (see open questions).
+
+**Current state of the pipeline:**
+
+| Stage | Status |
+|---|---|
+| `notebooks/01_crossmatch.ipynb` → `05_control_sample.ipynb` | New this session; all 5 verified to run end-to-end cleanly; outputs byte-identical to previously-committed canonical files |
+| `scripts/matching/desi_crossmatch_multi.py` | Fixed this session (SPECTYPE filter, output filename); verified standalone |
+| `config/qso_params.yaml` | 2MASS offsets/wavelengths added this session |
+| `data/matched/` canonical files | Unchanged in content (regenerated but byte-identical); `UV_EXCESS_SAMPLE.csv`/`UV_EXCESS_SAMPLE_progress.csv` never touched (that step is manual, by design) |
+| `figures/` | 9 new PNGs from the new notebooks (crossmatch quality, merge/dedupe counts, color-color, E(B-V) histogram, UV-excess fraction, g-mag histogram, SED review examples, z-vs-W4, control-sample match) |
+| `scripts/obs/` (Lick Kast polarimetry planning) | Untouched this session — out of scope per user decision |
+| Local environment | `nbconvert`, `nbformat`, `ipykernel` installed into the project's Python 3.14 env; Jupyter kernel `uvleakage` registered |
+
+**Blockers / open questions:**
+- W4 Vega→AB offset config reconciliation (`z_w4_scatter.py`/new notebook 04 use SVO's 6.594; `config/qso_params.yaml` says 6.620) — still not aligned, carried over since 2026-07-12
+- `/validate-crossmatch` on the four legacy matched-CSV variants (UKPSAWG/PSAWG/PSG/UKPSGAW) still not run — confirmed this session they're fully orphaned (nothing in the current pipeline reads them), but the formal comparison itself remains outstanding (long-standing item since project start)
+- The g-r/r-i (GRI) UV-excess criterion permanence question (open since 2026-07-02) appears to have been implicitly resolved by file layout — `uv_excess_candidates_w2m_gri.csv` now lives in `data/matched/legacy/`, and the canonical `candidates_to_csv_w2m.py`/new notebook 03 use only the standard 2-branch criterion — but no session ever explicitly closed this decision; worth confirming with the user it's intentional
+- All other longstanding items unrelated to this session's scope remain untouched: 1/P vs 1/P² exposure-scaling convention (email K. Leighly), Galactic extinction correction for g mags, z<0.5 W2M candidates unvetted, `notebooks/06_observing_plan.ipynb` not built, 52 SED PNGs in `~/Downloads/` unreviewed, missing `absmag_vs_z.ipynb`
+- Nested `CLAUDE.md` and `docs/pipeline_overview.md`/`docs/catalogs.md` updates were scoped to reconciling stale pipeline descriptions only — not a full audit of either file beyond that
+
+**Suggested next steps:**
+1. Confirm the GRI-criterion resolution (standard 2-branch, not 3-branch) reflects an actual decision rather than an accident of file organization
+2. Reconcile the W4 Vega→AB offset between `z_w4_scatter.py`/notebook 04 (6.594) and config (6.620) — long-standing item, still open
+3. Run `/validate-crossmatch` on the four legacy matched-CSV variants to formally close that comparison (long-standing item)
+4. Now that the sample-selection notebooks are current and verified, consider whether `scripts/obs/` (Lick polarimetry planning) should get the same notebook treatment as a follow-up
+5. All other longstanding backlog items above remain open

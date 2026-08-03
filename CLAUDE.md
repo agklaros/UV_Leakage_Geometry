@@ -35,13 +35,14 @@ Required packages: `astropy`, `astroquery`, `synphot`, `numpy`, `pandas`, `matpl
 
 ## Pipeline
 
-Notebooks must be run in order:
+Rebuilt 2026-08-02 to mirror the current `scripts/` pipeline end-to-end (the previous 01–05 set
+predated the visual-vetting + control-sample stage and is gone). Notebooks must be run in order:
 
-1. `notebooks/01_crossmatch.ipynb` — CDS XMatch (via `astroquery.xmatch`) to GALEX/PS1/UKIDSS/AllWISE/2MASS for DESI, W2M-current, and W2M-legacy; combines DESI+W2M and generates UV-excess candidate CSVs (canonical selection step — see `04_color_color.ipynb` note)
-2. `notebooks/02_build_seds.ipynb` — Convert AB mags to F_λ (erg/s/cm²/Å), apply Vega→AB offsets, outlier-clip, plot SEDs per catalog variant, including candidate SEDs with template overlay
-3. `notebooks/03_unreddened_template.ipynb` — Load `templates/qso_template.txt`, redshift to each QSO's z, compute synthetic photometry via `synphot`, overlay on observed SEDs (template scaling only — E(B-V) fitting via `quasar_unred.find_ebv` is not yet wired in; see the notebook's "Next step" section)
-4. `notebooks/04_color_color.ipynb` — Visualizes the UV-excess candidates selected in notebook 01; NUV/G vs G/R color-color plots. UV-excess selection criterion (applied in notebook 01): FUV > NUV AND (NUV/G upturn OR FUV/NUV upturn) AND E(B-V) > 0.2
-5. `notebooks/05_histograms.ipynb` — Crossmatch quality histograms (real vs. false-match separation) and E(B-V) distribution / UV-excess fraction charts
+1. `notebooks/01_crossmatch.ipynb` — CDS XMatch (via `astroquery.xmatch`) to GALEX/PS1/UKIDSS/AllWISE/2MASS for DESI, W2M-current, and W2M-legacy (legacy kept for reproducibility only); crossmatch-quality (real vs. false match) figure
+2. `notebooks/02_merge_and_dedupe.ipynb` — Combines DESI + W2M-current, removes duplicate rows → `FINAL_COMBINED_QSOs_W2M.csv`
+3. `notebooks/03_uv_excess_selection.ipynb` — Canonical UV-excess selection step: FUV > NUV AND (NUV/G upturn OR FUV/NUV upturn) AND E(B-V) > 0.2 → `uv_excess_candidates_w2m.csv` (34); color-color, E(B-V) histogram, UV-excess-fraction, and g-mag figures
+4. `notebooks/04_visual_review_final_sample.ipynb` — Documents the SED + template-overlay methodology and the (interactive, run standalone via `scripts/seds/review_uv_excess_sample.py`, not in-notebook) Accept/Reject review; loads the resulting final sample `UV_EXCESS_SAMPLE.csv` (29 QSOs) and a z vs. absolute-W4 diagnostic
+5. `notebooks/05_control_sample.ipynb` — Nearest-neighbor control sample (3D standardized z/E(B-V)/g-mag match) → `uv_excess_with_controls_nn.csv`
 
 ## Parameters — Single Source of Truth
 
@@ -80,7 +81,7 @@ Key values:
 
 ## Known Issues — Always Check Before Acting
 
-- [x] Issue logged 2026-07-07, fixed 2026-07-07: `01_crossmatch.ipynb` now filters `SPECTYPE == 'QSO'` on the DESI base catalog before matching (the original `desi_crossmatch_multi.py` script did not)
+- [x] Issue logged 2026-07-07, fixed 2026-07-07 (notebook), fixed 2026-08-02 (script): DESI base catalog is filtered to `SPECTYPE == 'QSO'` before matching. `scripts/matching/desi_crossmatch_multi.py` was missing this filter (and was writing to `COMBINED_matched.csv` instead of the `DESI_COMBINED_matched.csv` every downstream step reads) until both were fixed 2026-08-02 alongside the notebook rebuild.
 - [ ] Convert all bands to AB before flux conversion — WISE and UKIDSS require Vega→AB offsets (see config)
 - [ ] UV-excess candidate sample target is <100 — flag and investigate if it grows larger
 - [ ] Crossmatch radius (2 arcsec) not yet optimized across catalogs

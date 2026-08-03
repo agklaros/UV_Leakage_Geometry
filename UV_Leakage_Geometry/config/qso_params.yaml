@@ -32,6 +32,11 @@ band_wavelengths_AA:           # pivot wavelengths in Angstroms
   W3:   120820
   W4:   221940
 
+band_wavelengths_2mass_AA:     # 2MASS J/H/K pivot wavelengths (distinct filter system from UKIDSS)
+  J:    12350
+  H:    16620
+  K:    21590
+
 vega_to_ab_offsets:            # add to Vega mag before flux conversion
   W1:  2.699
   W2:  3.339
@@ -41,6 +46,11 @@ vega_to_ab_offsets:            # add to Vega mag before flux conversion
   J:   0.938
   H:   1.379
   K:   1.900
+
+vega_to_ab_offsets_2mass:      # 2MASS J/H/K Vega->AB offsets (distinct filter system from UKIDSS)
+  J:   0.894
+  H:   1.374
+  K:   1.839
 
 flux_outlier_thresholds_flam:  # FLAM values above these are set to NaN
   galex_panstarrs: 1.0e-11
